@@ -3,6 +3,7 @@ from pydantic import BaseModel
 from src.agents.supervisor import run_forge_workflow
 from src.models.schemas import ForgeResponse, TransmuteRequest, TransmuteResponse
 from src.services.brand_service import BrandService
+from src.services.aws_service import AWSStepFunctionsService
 from src.agents.transmuter_agent import TransmuterAgent
 from src.utils.logger import get_logger
 from typing import List, Dict, Optional, Any, AsyncGenerator
@@ -111,9 +112,18 @@ async def autopilot_stream(request: Request, content: str):
 async def forge_content(request: ForgeRequest):
     try:
         # """
-        pass
-
-        # 3. Run the Forge Workflow (LangGraph) with user prompt and optional image context
+        # SERVERLESS PRODUCTION PATH: AWS Step Functions
+        # This will attempt to deploy the Forge agent swarm as AWS Lambda functions
+        # """
+        sfn_service = AWSStepFunctionsService()
+        sfn_arn = await sfn_service.start_forge_workflow(
+            prompt=request.prompt,
+            image_context=request.image_context
+        )
+        if sfn_arn:
+            logger.info(f"Delegated to AWS Step Functions: {sfn_arn}")
+        
+        # 3. Run the Forge Workflow (LangGraph fallback for local hackathon demo)
         result = await run_forge_workflow(
             user_prompt=request.prompt,
             image_context=request.image_context

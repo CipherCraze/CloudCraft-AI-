@@ -1,0 +1,113 @@
+{
+    "Comment": "Enterprise AWS Step Functions orchestration for CloudCraft AI 'Forge' Workflow.",
+    "StartAt": "ResearcherAgent",
+    "States": {
+        "ResearcherAgent": {
+            "Type": "Task",
+            "Resource": "arn:aws:lambda:REGION:ACCOUNT:function:CloudCraft-Researcher",
+            "Retry": [
+                {
+                    "ErrorEquals": [
+                        "Lambda.ServiceException",
+                        "Lambda.AWSLambdaException",
+                        "Lambda.SdkClientException",
+                        "TooManyRequestsException"
+                    ],
+                    "IntervalSeconds": 2,
+                    "MaxAttempts": 3,
+                    "BackoffRate": 2
+                }
+            ],
+            "Next": "CopywriterAgent",
+            "ResultPath": "$.research_output",
+            "Catch": [
+                {
+                    "ErrorEquals": [
+                        "States.ALL"
+                    ],
+                    "Next": "WorkflowFailed"
+                }
+            ]
+        },
+        "CopywriterAgent": {
+            "Type": "Task",
+            "Resource": "arn:aws:lambda:REGION:ACCOUNT:function:CloudCraft-Copywriter",
+            "InputPath": "$.research_output",
+            "Next": "DesignerAgent",
+            "ResultPath": "$.copywriter_output",
+            "Retry": [
+                {
+                    "ErrorEquals": [
+                        "States.ALL"
+                    ],
+                    "IntervalSeconds": 3,
+                    "MaxAttempts": 2,
+                    "BackoffRate": 1.5
+                }
+            ]
+        },
+        "DesignerAgent": {
+            "Type": "Task",
+            "Resource": "arn:aws:lambda:REGION:ACCOUNT:function:CloudCraft-Designer",
+            "InputPath": "$",
+            "Next": "ComplianceAgent",
+            "ResultPath": "$.designer_output"
+        },
+        "ComplianceAgent": {
+            "Type": "Task",
+            "Resource": "arn:aws:lambda:REGION:ACCOUNT:function:CloudCraft-Compliance",
+            "Next": "CheckCompliancePass",
+            "ResultPath": "$.compliance_output"
+        },
+        "CheckCompliancePass": {
+            "Type": "Choice",
+            "Choices": [
+                {
+                    "Variable": "$.compliance_output.status",
+                    "StringEquals": "FAILED",
+                    "Next": "NotifySlackAndFail"
+                },
+                {
+                    "Variable": "$.compliance_output.status",
+                    "StringEquals": "REWRITE_REQUIRED",
+                    "Next": "CopywriterAgent"
+                }
+            ],
+            "Default": "SaveToDynamoDB"
+        },
+        "SaveToDynamoDB": {
+            "Type": "Task",
+            "Resource": "arn:aws:states:::dynamodb:putItem",
+            "Parameters": {
+                "TableName": "CloudCraft-AgentMemoryBank",
+                "Item": {
+                    "CampaignId": {
+                        "S.$": "$.campaign_id"
+                    },
+                    "FinalAssetUrl": {
+                        "S.$": "$.designer_output.s3_url"
+                    },
+                    "GeneratedCopy": {
+                        "S.$": "$.copywriter_output.text"
+                    }
+                }
+            },
+            "Next": "WorkflowSuccess"
+        },
+        "NotifySlackAndFail": {
+            "Type": "Task",
+            "Resource": "arn:aws:states:::sns:publish",
+            "Parameters": {
+                "TopicArn": "arn:aws:sns:REGION:ACCOUNT:ComplianceAlerts",
+                "Message": "A generated asset was flagged by the Compliance Agent and the workflow has been aborted."
+            },
+            "Next": "WorkflowFailed"
+        },
+        "WorkflowSuccess": {
+            "Type": "Succeed"
+        },
+        "WorkflowFailed": {
+            "Type": "Fail"
+        }
+    }
+}

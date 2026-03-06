@@ -132,6 +132,9 @@ export const LiveSwarmCanvas: React.FC<LiveSwarmCanvasProps> = ({ prompt, onComp
                 abortRef.current?.abort();
                 setTimeout(() => onCancel(), 3000);
                 break;
+            case 'aws_telemetry':
+                // Handled implicitly by pushing to events array
+                break;
             case 'workflow_complete':
                 setIsGenerating(false);
                 onComplete(payload);
@@ -235,6 +238,17 @@ export const LiveSwarmCanvas: React.FC<LiveSwarmCanvasProps> = ({ prompt, onComp
                                         <div key={i} className="flex items-center gap-2 py-1 px-2 opacity-50">
                                             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
                                             <span className="text-xs text-muted-foreground">{ev.data.agent} complete</span>
+                                        </div>
+                                    );
+                                }
+                                if (ev.event === 'aws_telemetry') {
+                                    return (
+                                        <div key={i} className="flex flex-col gap-1.5 py-2 px-3 rounded-md bg-stone-950 border border-orange-500/30 animate-in slide-in-from-left duration-300 shadow-[0_0_15px_rgba(249,115,22,0.1)] mt-2 mb-2">
+                                            <div className="flex items-center gap-2">
+                                                <Terminal className="w-3.5 h-3.5 text-orange-500" />
+                                                <span className="text-[10px] font-mono text-orange-400 font-bold tracking-widest uppercase">AWS {ev.data.service} Engine</span>
+                                            </div>
+                                            <p className="text-[11px] font-mono text-stone-300 leading-snug">{ev.data.message}</p>
                                         </div>
                                     );
                                 }

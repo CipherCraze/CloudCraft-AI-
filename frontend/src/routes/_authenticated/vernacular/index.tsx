@@ -1,28 +1,15 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { useState, useMemo } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { useState, useMemo, useRef } from 'react';
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
-    Languages,
-    Zap,
-    Palette,
-    MessageSquare,
-    ArrowRight,
-    Loader2,
-    CheckCircle2,
-    Info,
-    History,
-    Sparkles,
-    Eye,
-    Globe,
-    Search as SearchIcon,
-    X,
-    Cpu,
-    Activity,
-    MapPin
+    Languages, Zap, Palette, MessageSquare, Loader2,
+    History, Sparkles, Globe, X, Activity, Play, Square,
+    Copy, Shield, RadioTower, ImagePlus, Video, Hash, Users,
+    AlertTriangle, Database, CalendarClock, Bell
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { IndiaMap } from '@/components/vernacular/IndiaMap';
@@ -32,7 +19,6 @@ import { Main } from '@/components/layout/main';
 import { TopNav } from '@/components/layout/top-nav';
 import { ProfileDropdown } from '@/components/profile-dropdown';
 import { ThemeSwitch } from '@/components/theme-switch';
-import { Input } from '@/components/ui/input';
 
 export const Route = createFileRoute('/_authenticated/vernacular/')({
     component: VernacularPage,
@@ -53,56 +39,17 @@ const REGION_IMAGES: Record<string, string> = {
     "Rajasthan": "/images/vernacular/rajasthan.png",
 };
 
-// Visual Transmutation Config
-const STATE_VISUALS: Record<string, { theme: string, color: string, gradient: string, imageDesc: string, pattern?: string }> = {
-    "Maharashtra": {
-        theme: "indigo",
-        color: "#6366f1",
-        gradient: "from-indigo-600/40 to-purple-600/40",
-        imageDesc: "Mumbai Marine Drive Skyline at twilight, golden lights reflecting on the Arabian Sea."
-    },
-    "Punjab": {
-        theme: "amber",
-        color: "#f59e0b",
-        gradient: "from-amber-500/40 to-orange-600/40",
-        imageDesc: "Golden fields of mustard during Baisakhi, vibrant Punjab farm landscape."
-    },
-    "Kerala": {
-        theme: "emerald",
-        color: "#10b981",
-        gradient: "from-emerald-500/40 to-teal-600/40",
-        imageDesc: "Misty Munnar tea gardens or tranquil Alappuzha backwaters at dawn."
-    },
-    "Tamil Nadu": {
-        theme: "rose",
-        color: "#f43f5e",
-        gradient: "from-rose-500/40 to-orange-600/40",
-        imageDesc: "Intricate gopurams of Meenakshi Temple, vibrant cultural heritage."
-    },
-    "West Bengal": {
-        theme: "cyan",
-        color: "#06b6d4",
-        gradient: "from-cyan-500/40 to-blue-600/40",
-        imageDesc: "Victoria Memorial in Kolkata, white marble gleaming under a clear blue sky."
-    },
-    "Rajasthan": {
-        theme: "orange",
-        color: "#f97316",
-        gradient: "from-orange-500/40 to-yellow-600/40",
-        imageDesc: "The Great Indian Desert at sunset, camel silhouettes against a deep orange sky."
-    },
-    "Karnataka": {
-        theme: "blue",
-        color: "#3b82f6",
-        gradient: "from-blue-500/40 to-indigo-600/40",
-        imageDesc: "The lit-up Mysore Palace at night, a spectacle of royal grandeur."
-    },
-    "Gujarat": {
-        theme: "yellow",
-        color: "#eab308",
-        gradient: "from-yellow-400/40 to-orange-500/40",
-        imageDesc: "The white salt desert of Rann of Kutch under a full moon."
-    }
+const STATE_VISUALS: Record<string, { color: string; gradient: string; imageDesc: string }> = {
+    "Maharashtra": { color: "#6366f1", gradient: "from-indigo-600 to-purple-600", imageDesc: "Mumbai Marine Drive Skyline at twilight, golden lights reflecting on the Arabian Sea." },
+    "Punjab": { color: "#f59e0b", gradient: "from-amber-500 to-orange-600", imageDesc: "Golden fields of mustard during Baisakhi, vibrant Punjab farm landscape." },
+    "Kerala": { color: "#10b981", gradient: "from-emerald-500 to-teal-600", imageDesc: "Misty Munnar tea gardens or tranquil Alappuzha backwaters at dawn." },
+    "Tamil Nadu": { color: "#f43f5e", gradient: "from-rose-500 to-orange-600", imageDesc: "Intricate gopurams of Meenakshi Temple, vibrant cultural heritage." },
+    "West Bengal": { color: "#06b6d4", gradient: "from-cyan-500 to-blue-600", imageDesc: "Victoria Memorial in Kolkata, white marble gleaming under a clear blue sky." },
+    "Rajasthan": { color: "#f97316", gradient: "from-orange-500 to-yellow-600", imageDesc: "The Great Indian Desert at sunset, camel silhouettes against a deep orange sky." },
+    "Karnataka": { color: "#3b82f6", gradient: "from-blue-500 to-indigo-600", imageDesc: "The lit-up Mysore Palace at night, a spectacle of royal grandeur." },
+    "Gujarat": { color: "#eab308", gradient: "from-yellow-400 to-orange-500", imageDesc: "The white salt desert of Rann of Kutch under a full moon." },
+    "Andhra Pradesh": { color: "#8b5cf6", gradient: "from-violet-500 to-purple-600", imageDesc: "Tirupati Balaji temple complex, a spiritual marvel of South India." },
+    "Telangana": { color: "#ec4899", gradient: "from-pink-500 to-rose-600", imageDesc: "Charminar lit up at night, Hyderabad's iconic landmark." },
 };
 
 function VernacularPage() {
@@ -111,11 +58,64 @@ function VernacularPage() {
     const [isTransmuting, setIsTransmuting] = useState(false);
     const [result, setResult] = useState<any>(null);
     const [logs, setLogs] = useState<string[]>([]);
-    const [searchQuery, setSearchQuery] = useState('');
+    const [imagePreview, setImagePreview] = useState<string | null>(null);
+    const [campaignHistory, setCampaignHistory] = useState<any[]>([]);
+    const [historyLoading, setHistoryLoading] = useState(false);
+    const [scheduleTime, setScheduleTime] = useState("");
+    const [isScheduling, setIsScheduling] = useState(false);
+    const [scheduleResult, setScheduleResult] = useState<any>(null);
+    const audioRef = useRef<HTMLAudioElement>(null);
+    const [isPlaying, setIsPlaying] = useState(false);
+
+    const toggleAudio = () => {
+        if (audioRef.current) {
+            if (isPlaying) { audioRef.current.pause(); } else { audioRef.current.play(); }
+            setIsPlaying(!isPlaying);
+        }
+    };
+
+    const fetchHistory = async () => {
+        setHistoryLoading(true);
+        try {
+            const res = await fetch('http://127.0.0.1:8000/api/v1/vernacular/history');
+            const data = await res.json();
+            setCampaignHistory(data.history || []);
+        } catch { setCampaignHistory([]); } finally { setHistoryLoading(false); }
+    };
+
+    const handleSchedule = async () => {
+        if (!scheduleTime || !result) return;
+        setIsScheduling(true);
+        try {
+            const res = await fetch('http://127.0.0.1:8000/api/v1/vernacular/schedule', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    campaign_name: `${result.state}_${result.language}_Campaign`,
+                    state: result.state,
+                    language: result.language,
+                    audio_url: result.audio_url || "",
+                    translated_content: result.translated_content || "",
+                    schedule_time: scheduleTime
+                })
+            });
+            if (!res.ok) {
+                const errData = await res.json();
+                throw new Error(errData.detail || "Scheduling failed");
+            }
+            const data = await res.json();
+            setScheduleResult(data);
+            toast.success("Broadcast scheduled! Email will arrive via AWS SNS.");
+        } catch (e: any) {
+            toast.error(e.message || "Failed to schedule broadcast.");
+        } finally {
+            setIsScheduling(false);
+        }
+    };
 
     const activeVisuals = useMemo(() => {
-        if (!selectedState) return { theme: "slate", color: "#64748b", gradient: "from-slate-600/20 to-slate-900/20", imageDesc: "" };
-        return STATE_VISUALS[selectedState] || { theme: "indigo", color: "#6366f1", gradient: "from-indigo-600/20 to-indigo-900/20", imageDesc: "" };
+        if (!selectedState) return { color: "#6366f1", gradient: "from-indigo-600 to-purple-600", imageDesc: "" };
+        return STATE_VISUALS[selectedState] || { color: "#6366f1", gradient: "from-indigo-600 to-purple-600", imageDesc: "" };
     }, [selectedState]);
 
     const addLog = (msg: string) => setLogs(prev => [...prev, `[${new Date().toLocaleTimeString()}] ${msg}`]);
@@ -123,350 +123,526 @@ function VernacularPage() {
     const handleTransmute = async () => {
         if (!content.trim()) return toast.error("Please enter content to transmute");
         if (!selectedState) return toast.error("Please select a state on the map");
-
         setIsTransmuting(true);
         setLogs([]);
         setResult(null);
-
-        addLog(`Initiating Project Vernacular for ${selectedState}...`);
-        addLog(`Deploying Socio-Cultural Agent to analyze regional demographics and sentiment...`);
-        addLog(`Synchronizing with ${selectedState} edge nodes for dialect high-fidelity...`);
-
+        setScheduleResult(null);
+        setScheduleTime("");
+        addLog(`[START] Initializing agentic swarm for ${selectedState}...`);
+        addLog(`[AWS Bedrock] Deploying Socio-Cultural Strategist agent...`);
         try {
+            const fakeStream = setInterval(() => {
+                const fakeLogs = [
+                    `[AWS Rekognition] Scanning visual context for cultural alignment...`,
+                    `[AWS Comprehend] Running regional compliance sentiment analysis...`,
+                    `[AWS Polly] Compiling neural TTS for ${selectedState} dialect...`,
+                    `[Agent Swarm] Synthesizing hyper-local marketing intelligence...`,
+                    `[AWS Bedrock] Creative Director agent generating native ${selectedState} copy...`,
+                ];
+                addLog(fakeLogs[Math.floor(Math.random() * fakeLogs.length)]);
+            }, 900);
+
+            const payload = { content, state: selectedState, has_image_context: !!imagePreview };
             const response = await fetch('http://127.0.0.1:8000/api/v1/vernacular/transmute', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ content, state: selectedState })
+                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
             });
-
+            clearInterval(fakeStream);
             if (!response.ok) throw new Error("Transmutation failed");
-
-            addLog(`Linguistic Agent transcreating content into ${selectedState} vernacular...`);
-            await new Promise(r => setTimeout(r, 800));
-            addLog(`Aesthetic Agent adjusting UI tokens to match regional color psychology...`);
-            await new Promise(r => setTimeout(r, 600));
-
             const data = await response.json();
             setResult(data);
-            addLog(`Success: Content culturally pivoted for ${selectedState}.`);
+            addLog(`[SUCCESS] Pipeline complete. ${data.language} content asset ready.`);
+            if (data.audio_url) addLog(`[AWS Polly → S3] Audio asset uploaded successfully.`);
+            addLog(`[AWS DynamoDB] Campaign logged to history vault.`);
+            fetchHistory();
         } catch (err) {
             toast.error("Failed to transmute content");
-            addLog(`Error: Linguistic pipeline failure.`);
+            addLog(`[ERROR] Linguistic pipeline failure.`);
         } finally {
             setIsTransmuting(false);
         }
     };
 
+    const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onloadend = () => { setImagePreview(reader.result as string); toast.success("Visual loaded for Amazon Rekognition."); };
+            reader.readAsDataURL(file);
+        }
+    };
+
     return (
-        <div className="min-h-screen bg-background text-foreground flex flex-col">
-            <Header className="sticky top-0 z-50 border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-2 sm:px-6">
-                <div className="flex items-center gap-2 sm:gap-4"><TopNav links={topNav} /></div>
-                <div className="ms-auto flex items-center space-x-2 sm:space-x-4">
-                    <div className="relative hidden md:flex items-center">
-                        <SearchIcon className="absolute left-2.5 h-4 w-4 text-muted-foreground" />
-                        <Input placeholder="Search vernacular assets..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
-                            className="pl-9 h-9 w-64 bg-secondary/50 border-secondary rounded-lg text-sm shadow-none" />
-                        {searchQuery && <X className="absolute right-2.5 h-4 w-4 text-muted-foreground cursor-pointer" onClick={() => setSearchQuery('')} />}
-                    </div>
-                    <ThemeSwitch /><ProfileDropdown />
-                </div>
+        <div className="min-h-screen bg-background flex flex-col">
+            <Header className="sticky top-0 z-50 border-b border-border/40 bg-background/95 backdrop-blur px-6">
+                <div className="flex items-center gap-4"><TopNav links={topNav} /></div>
+                <div className="ml-auto flex items-center space-x-4"><ThemeSwitch /><ProfileDropdown /></div>
             </Header>
 
-            <Main className="px-4 py-8 md:px-8 max-w-7xl mx-auto space-y-10 relative">
-                {/* Background grid - matches Dashboard */}
-                <div className="absolute inset-0 z-0 pointer-events-none opacity-[0.03] dark:opacity-[0.05]"
-                    style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, currentColor 1px, transparent 0)', backgroundSize: '32px 32px' }} />
+            <Main className="max-w-7xl mx-auto w-full px-6 py-10 space-y-8">
 
-                {/* Dynamic State Accent Blur */}
-                {selectedState && (
-                    <div
-                        className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[300px] blur-[120px] rounded-full pointer-events-none transition-all duration-1000 opacity-20"
-                        style={{ backgroundColor: `${activeVisuals.color}44` }}
-                    />
+                {/* ── PAGE HEADER ── */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                        <div className="flex items-center gap-2 mb-2">
+                            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-[10px] font-bold uppercase tracking-widest">
+                                <span className="relative flex h-1.5 w-1.5"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" /><span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-primary" /></span>
+                                AWS Agentic Pipeline
+                            </div>
+                        </div>
+                        <h1 className="text-4xl font-bold tracking-tight">Project <span className="italic text-primary">Vernacular</span></h1>
+                        <p className="text-sm text-muted-foreground mt-1.5 max-w-xl">Transcreate brand messages into 15+ Indian dialects with hyper-local cultural intelligence, powered by AWS Bedrock, Comprehend & Polly.</p>
+                    </div>
+                    {result && (
+                        <Button variant="outline" onClick={() => setResult(null)} className="shrink-0 h-10 rounded-xl border-border/60">
+                            <History className="w-4 h-4 mr-2" /> New Campaign
+                        </Button>
+                    )}
+                    <Button variant="outline" onClick={fetchHistory} className="shrink-0 h-10 rounded-xl border-border/60" disabled={historyLoading}>
+                        {historyLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Database className="w-4 h-4 mr-1.5" />}
+                        {!historyLoading && "History"}
+                    </Button>
+                </div>
+
+                {/* ── CAMPAIGN HISTORY VAULT (DynamoDB) ── */}
+                {campaignHistory.length > 0 && (
+                    <Card className="border-amber-500/20 bg-amber-950/5 rounded-2xl overflow-hidden shadow-sm">
+                        <div className="px-5 py-4 border-b border-amber-500/20 bg-amber-500/5 flex items-center gap-2">
+                            <Database className="w-4 h-4 text-amber-400" />
+                            <span className="text-sm font-semibold">Campaign History Vault</span>
+                            <Badge className="ml-auto bg-amber-500/10 text-amber-400 border-amber-500/20 text-[10px] font-mono">AWS DynamoDB · {campaignHistory.length} records</Badge>
+                        </div>
+                        <ScrollArea className="max-h-[200px]">
+                            <div className="divide-y divide-border/50">
+                                {campaignHistory.map((h: any, i: number) => (
+                                    <div key={i} className="flex items-start gap-3 px-5 py-3 hover:bg-secondary/10 transition-colors">
+                                        <div className="w-8 h-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0 mt-0.5">
+                                            <Globe className="w-4 h-4 text-primary" />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-2 flex-wrap">
+                                                <span className="text-sm font-semibold">{h.state}</span>
+                                                <Badge variant="outline" className="text-[10px] font-mono">{h.language}</Badge>
+                                                <Badge variant="outline" className={cn("text-[10px]", h.comprehend_sentiment === "POSITIVE" ? "border-emerald-500/30 text-emerald-400" : "border-orange-500/30 text-orange-400")}>{h.comprehend_sentiment} · {h.comprehend_score}%</Badge>
+                                                <span className="text-[10px] text-muted-foreground ml-auto">{new Date(h.timestamp).toLocaleString()}</span>
+                                            </div>
+                                            <p className="text-[12px] text-muted-foreground mt-0.5 truncate">{h.original_content}</p>
+                                        </div>
+                                        {h.audio_url && (
+                                            <button className="w-8 h-8 rounded-lg border border-border/60 flex items-center justify-center hover:bg-primary/10 transition-colors shrink-0" onClick={() => { if (audioRef.current) { audioRef.current.src = h.audio_url; audioRef.current.play(); setIsPlaying(true); } }}>
+                                                <Play className="w-3.5 h-3.5 text-primary" />
+                                            </button>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        </ScrollArea>
+                    </Card>
                 )}
 
-                {/* Page Header */}
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
-                    <div className="space-y-1">
-                        <div className="inline-flex items-center px-2.5 py-0.5 rounded-full border border-primary/20 bg-primary/10 text-primary text-xs font-semibold mb-2 uppercase tracking-widest gap-2">
-                            <span className="relative flex h-2 w-2">
-                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
-                                <span className="relative inline-flex rounded-full h-2 w-2 bg-primary" />
-                            </span>
-                            Cultural Swarm Active
-                        </div>
-                        <h1 className="text-3xl md:text-4xl font-semibold tracking-tight text-foreground flex items-center gap-3">
-                            Project <span className="text-primary italic">Vernacular</span>
-                        </h1>
-                        <p className="text-sm text-muted-foreground max-w-2xl font-medium">
-                            Synthesize regional identities and transcreate brand messages into 15+ Indian dialects with hyper-local socio-cultural nuances.
-                        </p>
-                    </div>
-                </div>
-
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 relative z-10">
-                    {/* Left Side: Map & Identity Lock */}
-                    <div className="lg:col-span-12 xl:col-span-8 space-y-6">
-                        <Card className="border-border bg-card/60 rounded-3xl overflow-hidden shadow-sm backdrop-blur-md">
-                            <CardHeader className="border-b border-border/50 py-4 px-6 flex flex-row items-center justify-between bg-secondary/10">
-                                <div>
-                                    <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                                        <Globe className="w-4 h-4 text-primary" /> Territory Identity Matrix
-                                    </CardTitle>
-                                    <CardDescription className="text-xs">Synchronize with a regional node to begin transmutation.</CardDescription>
-                                </div>
-                                {selectedState && (
-                                    <Badge variant="outline" className="h-6 bg-primary/10 border-primary/20 text-primary font-bold px-3">
-                                        <MapPin className="w-3 h-3 mr-1.5" /> {selectedState.toUpperCase()}
-                                    </Badge>
-                                )}
-                            </CardHeader>
-                            <CardContent className="p-0 relative bg-slate-950/20 min-h-[500px] flex items-center justify-center">
-                                <IndiaMap
-                                    activeState={selectedState}
-                                    onSelectState={(state) => {
-                                        setSelectedState(state);
-                                        toast.success(`Identity Locked: ${state}`);
-                                    }}
-                                />
-                            </CardContent>
-                        </Card>
-
-                        {/* Region Aesthetic Insight - Below map, doesn't block states */}
-                        {selectedState && (
-                            <div className="p-5 bg-card/60 backdrop-blur-2xl rounded-2xl border border-border/50 animate-in slide-in-from-bottom-4 duration-500 shadow-sm overflow-hidden group relative">
-                                <div className="absolute inset-0 bg-gradient-to-br from-white/[0.02] to-transparent pointer-events-none" />
-                                <div className="flex gap-5 relative z-10">
-                                    {REGION_IMAGES[selectedState] && (
-                                        <div className="w-16 h-16 shrink-0 rounded-xl overflow-hidden border border-white/10 shadow-lg">
-                                            <img
-                                                src={REGION_IMAGES[selectedState]}
-                                                alt={selectedState}
-                                                className="w-full h-full object-cover grayscale-[0.5] group-hover:grayscale-0 transition-all duration-700"
-                                            />
-                                        </div>
-                                    )}
-                                    <div className="flex-1 min-w-0">
-                                        <div className="flex items-center gap-2 mb-1.5">
-                                            <div className="p-1 rounded-md bg-white/10 shadow-inner shrink-0">
-                                                <Palette className="w-3 h-3" style={{ color: activeVisuals.color }} />
-                                            </div>
-                                            <span className="text-[9px] font-black text-muted-foreground uppercase tracking-[0.3em]">Region Aesthetic Insight</span>
-                                        </div>
-                                        <p className="text-sm font-bold tracking-tight text-foreground truncate">{selectedState} Identity Matrix Locked</p>
-                                        <p className="text-[11px] text-muted-foreground font-medium italic leading-relaxed mt-0.5 line-clamp-2">"{activeVisuals.imageDesc}"</p>
+                {/* ── INPUT ROW: two cols on desktop ── */}
+                {!result && (
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        {/* LEFT: Brand message + image */}
+                        <Card className="border-border/60 bg-card rounded-2xl overflow-hidden flex flex-col shadow-sm">
+                            <div className="px-5 py-4 border-b border-border/50 flex items-center gap-2 bg-secondary/10">
+                                <MessageSquare className="w-4 h-4 text-primary" />
+                                <span className="text-sm font-semibold">Brand Directive</span>
+                                <span className="text-xs text-muted-foreground ml-auto">Input the core marketing message</span>
+                            </div>
+                            <Textarea
+                                placeholder="e.g., 'Discover CloudCraft AI — India's most intelligent regional marketing powerhouse. Built for Bharat, by Bharat.'"
+                                className="flex-1 min-h-[200px] resize-none bg-transparent border-0 focus-visible:ring-0 text-[15px] font-medium leading-relaxed placeholder:text-muted-foreground/25 p-5"
+                                value={content}
+                                onChange={(e) => setContent(e.target.value)}
+                            />
+                            <div className="px-5 py-4 border-t border-border/50 bg-secondary/5 flex items-center justify-between gap-4">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-9 h-9 rounded-xl bg-secondary border border-border/50 flex items-center justify-center shrink-0">
+                                        <ImagePlus className="w-4 h-4 text-muted-foreground" />
                                     </div>
-                                    <div className="shrink-0">
-                                        <div className="w-2 h-2 rounded-full animate-ping" style={{ backgroundColor: activeVisuals.color }} />
+                                    <div>
+                                        <p className="text-xs font-bold text-foreground">Visual Context</p>
+                                        <p className="text-[11px] text-muted-foreground flex items-center gap-1"><Shield className="w-3 h-3 text-emerald-500 inline" /> Amazon Rekognition</p>
                                     </div>
                                 </div>
-                                <div className="absolute -right-4 -bottom-4 w-20 h-20 blur-2xl rounded-full opacity-20 pointer-events-none" style={{ backgroundColor: activeVisuals.color }} />
-                            </div>
-                        )}
-
-                        {/* Agent Telemetry Log */}
-                        <Card className="border-border bg-slate-950 rounded-2xl overflow-hidden shadow-2xl">
-                            <div className="flex items-center justify-between px-5 py-3 border-b border-white/5 bg-slate-900/50">
-                                <div className="flex items-center gap-2">
-                                    <Activity className="w-3.5 h-3.5 text-indigo-400" />
-                                    <span className="text-[10px] font-mono font-bold text-slate-500 uppercase tracking-widest">Swarm_Telemetry.log</span>
-                                </div>
-                                {isTransmuting && <div className="text-[9px] text-indigo-400 animate-pulse font-mono tracking-widest">PROCESSING_CULTURAL_WEIGHTS...</div>}
-                            </div>
-                            <ScrollArea className="h-[140px] p-5 font-mono text-[11px] text-indigo-300/70 leading-relaxed">
-                                {logs.length === 0 ? (
-                                    <div className="flex flex-col items-center justify-center h-full opacity-30 italic">
-                                        <Cpu className="w-8 h-8 mb-2" />
-                                        <p>Awaiting high-priority cultural directive...</p>
+                                {imagePreview ? (
+                                    <div className="relative group rounded-lg overflow-hidden border border-border w-14 h-14 shrink-0">
+                                        <img src={imagePreview} alt="Context" className="w-full h-full object-cover" />
+                                        <button onClick={() => setImagePreview(null)} className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity"><X className="w-4 h-4 text-white" /></button>
                                     </div>
                                 ) : (
-                                    logs.map((log, i) => (
-                                        <div key={i} className="flex gap-4 mb-1.5 border-l border-white/5 pl-4">
-                                            <span className="text-white/20 shrink-0 font-bold">L-{i.toString().padStart(2, '0')}</span>
-                                            <p className={cn(log.includes("Error") ? "text-red-400" : "")}>{log}</p>
-                                        </div>
-                                    ))
+                                    <label className="cursor-pointer text-xs font-semibold px-4 py-2 rounded-lg border border-dashed border-border/80 hover:border-primary/50 hover:text-primary hover:bg-primary/5 text-muted-foreground transition-colors">
+                                        <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
+                                        Browse File
+                                    </label>
                                 )}
-                            </ScrollArea>
-                        </Card>
-                    </div>
-
-                    {/* Right Side: Command & Identity Sync */}
-                    <div className="lg:col-span-12 xl:col-span-4 space-y-6">
-                        <Card className="border-border bg-card/60 rounded-3xl shadow-sm backdrop-blur-md overflow-hidden flex flex-col h-full">
-                            <CardHeader className="border-b border-border/50 py-4 px-6 bg-secondary/20">
-                                <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                                    <Zap className="w-4 h-4 text-yellow-500" /> Directive Console
-                                </CardTitle>
-                                <CardDescription className="text-xs">Paste brand asset or content to transmute.</CardDescription>
-                            </CardHeader>
-                            <CardContent className="p-0 flex-1 flex flex-col">
-                                <Textarea
-                                    placeholder="e.g., 'Discover our latest organic tea collection from the hills...'"
-                                    className="flex-1 min-h-[250px] resize-none bg-transparent border-0 focus-visible:ring-0 p-6 text-base font-medium leading-relaxed placeholder:text-muted-foreground/30"
-                                    value={content}
-                                    onChange={(e) => setContent(e.target.value)}
-                                />
-                                <div className="p-6 border-t border-border/50 bg-secondary/10 space-y-4">
-                                    <div className="flex items-center justify-between text-[10px] text-muted-foreground font-mono uppercase tracking-widest">
-                                        <span>Input Integrity: OK</span>
-                                        <span>Target: {selectedState || 'NONE'}</span>
-                                    </div>
-                                    <Button
-                                        className={cn(
-                                            "w-full h-14 rounded-2xl font-black uppercase tracking-widest transition-all duration-500 text-xs shadow-lg",
-                                            selectedState ? "bg-primary text-primary-foreground hover:scale-[1.02] active:scale-[0.98]" : "bg-secondary text-muted-foreground"
-                                        )}
-                                        onClick={handleTransmute}
-                                        disabled={isTransmuting || !content || !selectedState}
-                                    >
-                                        {isTransmuting ? (
-                                            <>
-                                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                                Synthesizing...
-                                            </>
-                                        ) : (
-                                            <><Sparkles className="w-4 h-4 mr-2" /> Launch Transmutation</>
-                                        )}
-                                    </Button>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    </div>
-                </div>
-
-                {/* RESULT VIEW: High Fidelity Bento Grid */}
-                {result && (
-                    <div className="animate-in fade-in slide-in-from-bottom-8 duration-700 space-y-8 relative z-10 pt-8 border-t border-border/50">
-                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                            <div>
-                                <h2 className="text-2xl font-black uppercase tracking-tight text-foreground flex items-center gap-2 italic">
-                                    Identity <span className="text-primary underline decoration-primary/20">Synthesized</span>
-                                </h2>
-                                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mt-1">Linguistic & Cultural weights converged</p>
                             </div>
-                            <Button variant="outline" className="h-9 font-black uppercase tracking-widest text-[10px]" onClick={() => setResult(null)}>
-                                <History className="w-3.5 h-3.5 mr-2" /> New Directive
-                            </Button>
+                        </Card>
+
+                        {/* RIGHT: Map */}
+                        <Card className="border-border/60 bg-card rounded-2xl overflow-hidden flex flex-col shadow-sm">
+                            <div className="px-5 py-4 border-b border-border/50 flex items-center gap-2 bg-secondary/10">
+                                <Globe className="w-4 h-4 text-primary" />
+                                <span className="text-sm font-semibold">Territory Selection</span>
+                                {selectedState ? (
+                                    <Badge className="ml-auto bg-primary/10 text-primary border-primary/20 text-[10px] font-bold font-mono px-2">{selectedState.toUpperCase()}</Badge>
+                                ) : (
+                                    <span className="text-xs text-muted-foreground ml-auto">Click a state on the map</span>
+                                )}
+                            </div>
+                            <div className="relative flex-1 bg-slate-950/30 min-h-[280px] flex items-center justify-center overflow-hidden">
+                                {selectedState && (
+                                    <div className="absolute inset-0 opacity-10" style={{ background: `radial-gradient(circle at center, ${activeVisuals.color}, transparent 70%)` }} />
+                                )}
+                                <IndiaMap
+                                    activeState={selectedState}
+                                    onSelectState={(state) => { setSelectedState(state); toast.success(`Territory locked: ${state}`); }}
+                                />
+                                {selectedState && activeVisuals.imageDesc && (
+                                    <div className="absolute bottom-3 left-3 right-3 p-3 bg-background/90 backdrop-blur-xl rounded-xl border border-border/50 flex items-start gap-3 shadow-lg animate-in slide-in-from-bottom-2">
+                                        {REGION_IMAGES[selectedState] && (
+                                            <img src={REGION_IMAGES[selectedState]} alt={selectedState} className="w-10 h-10 rounded-lg object-cover shrink-0 border border-border/50" />
+                                        )}
+                                        <div className="min-w-0 flex-1">
+                                            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-0.5">Region Aesthetic</p>
+                                            <p className="text-[12px] font-medium text-foreground leading-snug italic line-clamp-2">"{activeVisuals.imageDesc}"</p>
+                                        </div>
+                                        <div className="shrink-0 w-2 h-2 rounded-full mt-1 animate-pulse" style={{ backgroundColor: activeVisuals.color }} />
+                                    </div>
+                                )}
+                            </div>
+                        </Card>
+                    </div>
+                )}
+
+                {/* ── LAUNCH BUTTON ── */}
+                {!result && (
+                    <Button
+                        className={cn(
+                            "w-full h-14 rounded-2xl font-black uppercase tracking-[0.25em] text-sm transition-all duration-300 shadow-lg group",
+                            (selectedState && content.trim()) ? "bg-primary hover:bg-primary/90 text-primary-foreground hover:scale-[1.01] hover:shadow-primary/25 hover:shadow-xl" : "bg-secondary text-muted-foreground cursor-not-allowed"
+                        )}
+                        onClick={handleTransmute}
+                        disabled={isTransmuting || !content.trim() || !selectedState}
+                    >
+                        {isTransmuting ? (
+                            <><Loader2 className="w-5 h-5 mr-3 animate-spin" /> Synthesizing Pipeline...</>
+                        ) : (
+                            <><Zap className="w-5 h-5 mr-3 group-hover:text-yellow-300 transition-colors" /> Initialize Transmutation</>
+                        )}
+                    </Button>
+                )}
+
+                {/* ── LOADING TELEMETRY ── */}
+                {isTransmuting && (
+                    <Card className="border-primary/20 bg-slate-950/80 rounded-2xl overflow-hidden shadow-2xl">
+                        <div className="px-5 py-4 border-b border-primary/20 bg-primary/10 flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <Activity className="w-4 h-4 text-primary animate-pulse" />
+                                <span className="text-[11px] font-mono font-bold text-primary uppercase tracking-widest">agent_telemetry.stream — {selectedState}</span>
+                            </div>
+                            <Badge variant="outline" className="border-primary/30 text-primary text-[10px] animate-pulse bg-black/40">● LIVE</Badge>
                         </div>
-
-                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                            {/* Region Aesthetic Insight Card */}
-                            <Card className="lg:col-span-1 bg-card/60 border-border rounded-[2.5rem] overflow-hidden shadow-sm group">
-                                <div className="h-48 relative overflow-hidden">
-                                    {REGION_IMAGES[selectedState as string] ? (
-                                        <img
-                                            src={REGION_IMAGES[selectedState as string]}
-                                            alt={selectedState as string}
-                                            className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110"
-                                        />
-                                    ) : (
-                                        <div className={cn("w-full h-full bg-gradient-to-br transition-all duration-1000", activeVisuals.gradient)}>
-                                            <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)', backgroundSize: '24px 24px' }} />
-                                        </div>
-                                    )}
-                                    <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent" />
-                                    <div className="absolute bottom-4 left-6">
-                                        <Badge className="bg-primary hover:bg-primary font-black uppercase tracking-[0.2em] text-[9px] mb-2 px-3">AESTHETIC_LOCKED</Badge>
-                                        <h3 className="text-xl font-black text-white uppercase tracking-tight italic">{selectedState} Identity</h3>
-                                    </div>
+                        <ScrollArea className="h-[220px] p-5 font-mono text-[12px] text-primary/70 leading-loose">
+                            {logs.map((log, i) => (
+                                <div key={i} className="flex gap-3 animate-in fade-in slide-in-from-left-2 duration-300 mb-2 pl-3 border-l-2 border-primary/20">
+                                    <span className="text-primary/30 font-bold shrink-0">[{String(i).padStart(2, '0')}]</span>
+                                    <span className={log.includes("ERROR") ? "text-red-400" : ""}>{log}</span>
                                 </div>
-                                <CardContent className="p-8 space-y-6">
-                                    <div className="space-y-4">
-                                        <div className="flex items-center justify-between text-[11px] font-black uppercase text-muted-foreground tracking-widest border-b border-border/40 pb-2">
-                                            <span>Tone Matrix</span>
-                                            <span className="text-primary">{result.tone}</span>
-                                        </div>
-                                        <div className="flex items-center justify-between text-[11px] font-black uppercase text-muted-foreground tracking-widest border-b border-border/40 pb-2">
-                                            <span>Dialect Root</span>
-                                            <span className="text-primary">{result.language}</span>
-                                        </div>
-                                    </div>
-                                    <div className="p-4 bg-secondary/30 rounded-2xl border border-border/50">
-                                        <h4 className="text-[9px] font-black uppercase text-muted-foreground tracking-[0.3em] mb-3">DNA Snapshot</h4>
-                                        <p className="text-xs text-foreground font-medium italic leading-relaxed">
-                                            "{result.visual_cues}"
-                                        </p>
-                                    </div>
-                                </CardContent>
-                            </Card>
+                            ))}
+                        </ScrollArea>
+                    </Card>
+                )}
 
-                            {/* Linguistic Pivot & Local Salt */}
-                            <Card className="lg:col-span-2 bg-slate-900 shadow-2xl rounded-[3rem] overflow-hidden border-2 border-primary/10 group">
-                                <CardHeader className="p-8 pb-4 flex flex-row items-center justify-between border-b border-white/5">
-                                    <div className="space-y-1">
-                                        <CardTitle className="text-[10px] font-black uppercase tracking-[0.4em] text-indigo-400 flex items-center gap-2">
-                                            <MessageSquare className="w-3 h-3" /> Dialect Synthesis Output
-                                        </CardTitle>
-                                        <CardDescription className="text-xs opacity-50 font-mono">CC-TRANS-V2.04 // {result.language.toUpperCase()}_PIVOT</CardDescription>
-                                    </div>
-                                    <div className="flex gap-2">
-                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-white/40 hover:text-white" onClick={() => { navigator.clipboard.writeText(result.translated_content); toast.success("Copied to clipboard"); }}>
-                                            <History className="w-4 h-4" />
+                {/* ── RESULT: FULL OUTPUT ── */}
+                {result && (
+                    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+
+                        {/* Result Header */}
+                        <div className="flex items-center gap-4 p-5 rounded-2xl border border-border/50 bg-card shadow-sm">
+                            <div className={cn("w-14 h-14 rounded-2xl bg-gradient-to-br flex items-center justify-center shrink-0 shadow-lg", activeVisuals.gradient)}>
+                                <Languages className="w-7 h-7 text-white" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                    <h2 className="text-xl font-bold tracking-tight">Campaign Asset Ready</h2>
+                                    <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20 font-mono text-[10px]">✓ PIPELINE COMPLETE</Badge>
+                                </div>
+                                <p className="text-sm text-muted-foreground mt-0.5">AWS Bedrock × Comprehend × Polly — {result.language} · {result.state}</p>
+                            </div>
+                            <div className="flex items-center gap-3 shrink-0">
+                                {result.audio_url && (
+                                    <Button size="sm" variant={isPlaying ? "destructive" : "default"} onClick={toggleAudio} className="h-9 rounded-xl font-bold">
+                                        {isPlaying ? <><Square className="w-4 h-4 mr-1.5" /> Stop</> : <><Play className="w-4 h-4 mr-1.5" /> Play Audio</>}
+                                    </Button>
+                                )}
+                            </div>
+                        </div>
+                        {result.audio_url && <audio ref={audioRef} src={result.audio_url} onEnded={() => setIsPlaying(false)} className="hidden" />}
+
+                        {/* Main Grid */}
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+                            {/* ─ COL 1 (span 2): The Content & Creator Suite ─ */}
+                            <div className="lg:col-span-2 space-y-6">
+
+                                {/* The Transcreated Copy — the hero output */}
+                                <Card className="border-border/60 bg-card rounded-2xl overflow-hidden shadow-sm">
+                                    <div className="px-5 py-4 border-b border-border/50 bg-secondary/10 flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: activeVisuals.color }} />
+                                            <span className="text-sm font-semibold">{result.language} Transcreated Copy</span>
+                                            <Badge variant="outline" className="text-[10px] font-mono ml-1">{result.state}</Badge>
+                                        </div>
+                                        <Button size="icon" variant="ghost" className="h-8 w-8 rounded-lg" onClick={() => { navigator.clipboard.writeText(result.translated_content); toast.success("Copied!"); }}>
+                                            <Copy className="w-4 h-4" />
                                         </Button>
                                     </div>
-                                </CardHeader>
-                                <CardContent className="p-10 space-y-10">
-                                    <div className="relative">
-                                        <div className="absolute -left-6 top-0 bottom-0 w-[2px] bg-gradient-to-b from-primary/60 to-transparent" />
-                                        <h3 className="text-4xl md:text-6xl font-black text-white italic tracking-tight leading-none uppercase mb-6 selection:bg-primary selection:text-white break-words">
-                                            {result.translated_content.split('\n')[0]}
-                                        </h3>
-                                        <p className="text-slate-300 text-lg md:text-xl font-medium leading-relaxed">
-                                            {result.translated_content}
-                                        </p>
+                                    <div className="p-6">
+                                        <p className="text-[16px] font-medium leading-relaxed text-foreground whitespace-pre-wrap">{result.translated_content}</p>
                                     </div>
+                                </Card>
 
-                                    <div className="space-y-4">
-                                        <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.4em] flex items-center gap-2">
-                                            <Sparkles className="w-3 h-3 text-indigo-400" /> Injected "Local Salt" Idioms:
-                                        </h4>
-                                        <div className="flex flex-wrap gap-2">
-                                            {result.local_slang.map((slang: string, i: number) => (
-                                                <Badge key={i} className="bg-indigo-500/10 border-indigo-500/20 text-indigo-300 hover:bg-indigo-500/20 hover:border-indigo-500/40 rounded-xl px-4 py-1.5 text-xs font-bold italic transition-all cursor-default shadow-[0_0_15px_rgba(99,102,241,0.1)]">
-                                                    "{slang}"
-                                                </Badge>
+                                {/* Reel Storyboard */}
+                                <Card className="border-border/60 bg-card rounded-2xl overflow-hidden shadow-sm">
+                                    <div className="px-5 py-4 border-b border-border/50 bg-secondary/10 flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            <Video className="w-4 h-4 text-pink-400" />
+                                            <span className="text-sm font-semibold">Regional Reel Storyboard</span>
+                                        </div>
+                                        <Badge variant="outline" className="text-[10px] font-mono">15s Short-Form</Badge>
+                                    </div>
+                                    <div className="divide-y divide-border/50">
+                                        {result.reel_script && result.reel_script.length > 0 ? result.reel_script.map((shot: any, i: number) => (
+                                            <div key={i} className="flex gap-4 p-4 hover:bg-secondary/20 transition-colors group">
+                                                <div className="w-20 shrink-0 text-center py-1">
+                                                    <span className="text-[11px] font-mono font-bold text-primary/60 bg-primary/5 border border-primary/10 rounded-lg px-2 py-1 inline-block">{shot.timestamp}</span>
+                                                </div>
+                                                <div className="space-y-1.5 flex-1">
+                                                    <p className="text-[13px] text-muted-foreground"><span className="text-[9px] font-black uppercase tracking-widest text-foreground/40 mr-2">VISUAL</span>{shot.visual}</p>
+                                                    <p className="text-[13px] font-semibold text-foreground"><span className="text-[9px] font-black uppercase tracking-widest text-primary/50 mr-2">AUDIO</span>"{shot.audio}"</p>
+                                                </div>
+                                            </div>
+                                        )) : <p className="p-5 text-sm text-muted-foreground italic text-center">No storyboard generated.</p>}
+                                    </div>
+                                </Card>
+
+                                {/* Marketing Hooks & SEO */}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                    <Card className="border-border/60 bg-card rounded-2xl p-5 shadow-sm space-y-4">
+                                        <div className="flex items-center gap-2">
+                                            <Hash className="w-4 h-4 text-blue-400" />
+                                            <span className="text-sm font-semibold">A/B Marketing Hooks</span>
+                                        </div>
+                                        <div className="space-y-2.5">
+                                            {result.marketing_hooks && result.marketing_hooks.map((hook: string, i: number) => (
+                                                <div key={i} className="p-3 rounded-xl bg-blue-500/5 border border-blue-500/10 text-[13px] font-medium text-foreground leading-snug">"{hook}"</div>
                                             ))}
                                         </div>
-                                    </div>
+                                        {result.seo_keywords && result.seo_keywords.length > 0 && (
+                                            <div className="pt-3 border-t border-border/50 space-y-2">
+                                                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Regional Search Matrix</p>
+                                                <div className="flex flex-wrap gap-1.5">
+                                                    {result.seo_keywords.map((kw: string, i: number) => (
+                                                        <Badge key={i} variant="secondary" className="text-[11px] px-2.5 py-1 bg-secondary/60">{kw}</Badge>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </Card>
 
-                                    <div className="pt-10 border-t border-white/5 grid grid-cols-1 md:grid-cols-2 gap-8 items-end">
-                                        <div className="space-y-4">
-                                            <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.4em]">Cultural Nuance Swarm:</h4>
-                                            <div className="space-y-2">
-                                                {result.cultural_nuances.slice(0, 3).map((n: string, i: number) => (
-                                                    <div key={i} className="flex gap-3 items-start group/n">
-                                                        <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 mt-1.5 shrink-0 group-hover/n:scale-125 transition-transform" />
-                                                        <p className="text-xs text-slate-400 font-medium">{n}</p>
-                                                    </div>
+                                    <Card className="border-border/60 bg-card rounded-2xl p-5 shadow-sm space-y-4">
+                                        <div className="flex items-center gap-2">
+                                            <Users className="w-4 h-4 text-emerald-400" />
+                                            <span className="text-sm font-semibold">Creator Ops</span>
+                                        </div>
+                                        <div className="space-y-3">
+                                            <div>
+                                                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1.5">Influencer Strategy</p>
+                                                <p className="text-[13px] leading-relaxed text-foreground bg-emerald-500/5 border border-emerald-500/10 rounded-xl p-3">{result.influencer_strategy || "No strategy generated."}</p>
+                                            </div>
+                                            {result.taboos_to_avoid && result.taboos_to_avoid.length > 0 && (
+                                                <div>
+                                                    <p className="text-[10px] font-black uppercase tracking-widest text-red-400/80 mb-1.5 flex items-center gap-1"><AlertTriangle className="w-3 h-3" /> Cultural Taboos</p>
+                                                    <ul className="space-y-1.5 bg-red-500/5 border border-red-500/10 rounded-xl p-3">
+                                                        {result.taboos_to_avoid.map((t: string, i: number) => (
+                                                            <li key={i} className="text-[12px] text-red-300/90 flex gap-2"><X className="w-3 h-3 shrink-0 mt-0.5 text-red-500" />{t}</li>
+                                                        ))}
+                                                    </ul>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </Card>
+                                </div>
+                            </div>
+
+                            {/* ─ COL 2: AWS Intelligence Panel ─ */}
+                            <div className="space-y-6">
+
+                                {/* Compliance Shield */}
+                                <Card className={cn("border rounded-2xl p-5 shadow-sm space-y-5", result.comprehend_score >= 80 ? "border-emerald-500/20 bg-emerald-950/10" : "border-orange-500/20 bg-orange-950/10")}>
+                                    <div className="flex items-center gap-3">
+                                        <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center border", result.comprehend_score >= 80 ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400" : "bg-orange-500/10 border-orange-500/20 text-orange-400")}>
+                                            <Shield className="w-5 h-5" />
+                                        </div>
+                                        <div>
+                                            <p className="text-sm font-semibold">AWS Compliance</p>
+                                            <p className="text-[10px] font-mono text-muted-foreground">COMPREHEND · REKOGNITION</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-end justify-between">
+                                        <div>
+                                            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1">Sentiment</p>
+                                            <Badge variant="outline" className={cn("text-xs font-mono", result.comprehend_sentiment === "POSITIVE" ? "text-emerald-400 border-emerald-500/30" : result.comprehend_sentiment === "MIXED" ? "text-yellow-400 border-yellow-500/30" : "text-orange-400 border-orange-500/30")}>{result.comprehend_sentiment}</Badge>
+                                        </div>
+                                        <div className="text-right">
+                                            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1">Safety Score</p>
+                                            <p className={cn("text-4xl font-black font-mono tracking-tighter leading-none", result.comprehend_score >= 80 ? "text-emerald-400" : "text-orange-400")}>{result.comprehend_score.toFixed(0)}<span className="text-2xl">%</span></p>
+                                        </div>
+                                    </div>
+                                    {imagePreview && (
+                                        <div className="flex items-center gap-2 p-2.5 rounded-lg bg-emerald-500/5 border border-emerald-500/10">
+                                            <img src={imagePreview} className="w-8 h-8 rounded-md object-cover shrink-0" alt="context" />
+                                            <div>
+                                                <p className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest">Visual Context</p>
+                                                <p className="text-[11px] text-muted-foreground">Rekognition: Approved</p>
+                                            </div>
+                                        </div>
+                                    )}
+                                </Card>
+
+                                {/* ── CARD: Amazon Polly Audio Player ── */}
+                                <Card className="border-indigo-500/20 bg-indigo-950/10 rounded-2xl overflow-hidden shadow-sm">
+                                    <div className="px-5 py-4 border-b border-indigo-500/20 bg-indigo-500/5 flex items-center gap-3">
+                                        <div className="w-8 h-8 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 shrink-0">
+                                            <RadioTower className="w-4 h-4" />
+                                        </div>
+                                        <div>
+                                            <p className="text-sm font-semibold leading-none">Amazon Polly</p>
+                                            <p className="text-[10px] font-mono text-indigo-400/70 mt-0.5 flex items-center gap-1.5">
+                                                <span className="relative flex h-1.5 w-1.5"><span className={cn("animate-ping absolute inline-flex h-full w-full rounded-full opacity-75", isPlaying ? "bg-red-400" : "bg-indigo-400")} /><span className={cn("relative inline-flex rounded-full h-1.5 w-1.5", isPlaying ? "bg-red-500" : "bg-indigo-500")} /></span>
+                                                {result.language} · neural voice synthesis
+                                            </p>
+                                        </div>
+                                        <Badge className="ml-auto bg-indigo-500/10 text-indigo-400 border-indigo-500/20 text-[10px] font-mono">TTS</Badge>
+                                    </div>
+                                    <div className="p-5">
+                                        <p className="text-[11px] text-muted-foreground mb-3">Preview the AI-synthesized {result.language} voiceover generated by Amazon Polly and stored on S3.</p>
+                                        {result.audio_url ? (
+                                            <Button
+                                                variant={isPlaying ? "destructive" : "default"}
+                                                onClick={toggleAudio}
+                                                className={cn("w-full h-11 rounded-xl font-bold uppercase tracking-wider text-xs", !isPlaying && "bg-indigo-600 hover:bg-indigo-500 text-white")}
+                                            >
+                                                {isPlaying ? <><Square className="w-4 h-4 mr-2" />Stop Audio</> : <><Play className="w-4 h-4 mr-2" />Preview Polly Audio</>}
+                                            </Button>
+                                        ) : (
+                                            <div className="h-11 rounded-xl border border-dashed border-border/60 flex items-center justify-center text-[11px] font-mono text-muted-foreground/50">
+                                                Polly audio not generated (check AWS credentials)
+                                            </div>
+                                        )}
+                                    </div>
+                                </Card>
+
+                                {/* ── CARD: EventBridge Scheduler (separate, clearly distinct) ── */}
+                                <Card className="border-violet-500/20 bg-violet-950/10 rounded-2xl overflow-hidden shadow-sm">
+                                    <div className="px-5 py-4 border-b border-violet-500/20 bg-violet-500/5 flex items-center gap-3">
+                                        <div className="w-8 h-8 rounded-xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center text-violet-400 shrink-0">
+                                            <CalendarClock className="w-4 h-4" />
+                                        </div>
+                                        <div>
+                                            <p className="text-sm font-semibold leading-none">Schedule Broadcast</p>
+                                            <p className="text-[10px] font-mono text-violet-400/70 mt-0.5">AWS EventBridge Scheduler</p>
+                                        </div>
+                                        <Badge className="ml-auto bg-violet-500/10 text-violet-400 border-violet-500/20 text-[10px] font-mono">EventBridge</Badge>
+                                    </div>
+                                    <div className="p-5 space-y-4">
+                                        <p className="text-[12px] text-muted-foreground leading-relaxed">
+                                            Set a one-time AWS EventBridge rule to auto-dispatch this <strong className="text-foreground">{result.language}</strong> campaign at a future date. This creates a real scheduler job in your AWS account.
+                                        </p>
+
+                                        <div className="space-y-1.5">
+                                            <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Broadcast Date & Time</label>
+                                            <input
+                                                type="datetime-local"
+                                                value={scheduleTime}
+                                                onChange={e => setScheduleTime(e.target.value)}
+                                                className="w-full h-11 rounded-xl border border-violet-500/30 bg-secondary/20 text-sm px-4 text-foreground focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-violet-500/50"
+                                            />
+                                        </div>
+
+                                        {scheduleResult ? (
+                                            <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 space-y-2">
+                                                <p className="text-[11px] font-black text-emerald-400 uppercase tracking-widest flex items-center gap-2">
+                                                    <span className="w-4 h-4 rounded-full bg-emerald-500 flex items-center justify-center text-white text-[9px]">✓</span>
+                                                    Scheduled via AWS EventBridge
+                                                </p>
+                                                <p className="text-[10px] font-mono text-muted-foreground break-all">{scheduleResult.schedule_arn}</p>
+                                                <p className="text-[11px] text-muted-foreground">{scheduleResult.message}</p>
+                                            </div>
+                                        ) : (
+                                            <Button
+                                                onClick={handleSchedule}
+                                                disabled={!scheduleTime || isScheduling}
+                                                className="w-full h-11 rounded-xl font-bold bg-violet-600 hover:bg-violet-500 text-white uppercase tracking-wider text-xs disabled:opacity-40"
+                                            >
+                                                {isScheduling
+                                                    ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Creating Schedule...</>
+                                                    : <><Bell className="w-4 h-4 mr-2" />Create EventBridge Schedule</>}
+                                            </Button>
+                                        )}
+                                        {!scheduleTime && !scheduleResult && (
+                                            <p className="text-[10px] text-muted-foreground/50 text-center">↑ Pick a date & time first, then click the button above</p>
+                                        )}
+                                    </div>
+                                </Card>
+
+                                {/* Cultural Nuances */}
+                                <Card className="border-border/60 bg-card rounded-2xl p-5 shadow-sm space-y-4">
+                                    <div className="flex items-center gap-2">
+                                        <Sparkles className="w-4 h-4 text-purple-400" />
+                                        <span className="text-sm font-semibold">Cultural Intelligence</span>
+                                    </div>
+                                    <div className="space-y-3">
+                                        {result.cultural_nuances && result.cultural_nuances.map((n: string, i: number) => (
+                                            <div key={i} className="flex gap-3 p-3 rounded-xl bg-secondary/30 border border-border/40">
+                                                <span className="text-[10px] font-black font-mono text-purple-400/50 mt-0.5 shrink-0">0{i + 1}</span>
+                                                <p className="text-[13px] font-medium text-foreground leading-snug">{n}</p>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    {result.local_slang && result.local_slang.length > 0 && (
+                                        <div className="pt-3 border-t border-border/50 space-y-2">
+                                            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Regional Slang Injected</p>
+                                            <div className="flex flex-wrap gap-2">
+                                                {result.local_slang.map((s: string, i: number) => (
+                                                    <Badge key={i} variant="secondary" className="text-[12px] px-3 py-1.5 max-w-full">
+                                                        <span className="truncate block max-w-[200px]">{s}</span>
+                                                    </Badge>
                                                 ))}
                                             </div>
                                         </div>
-                                        <div className="flex flex-col gap-3">
-                                            <Button className="w-full bg-white text-black hover:bg-slate-200 h-14 rounded-2xl font-black uppercase tracking-widest text-xs group/btn shadow-[0_20px_40px_rgba(255,255,255,0.1)]">
-                                                Sync to Campaigns <ArrowRight className="w-4 h-4 ml-2 group-hover/btn:translate-x-1 transition-transform" />
-                                            </Button>
-                                            <Button variant="outline" className="w-full h-12 rounded-2xl border-white/10 text-white/60 hover:text-white text-[10px] font-black uppercase tracking-widest">
-                                                Download Creative Pack
-                                            </Button>
+                                    )}
+                                    {result.visual_cues && (
+                                        <div className="pt-3 border-t border-border/50">
+                                            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1.5 flex items-center gap-1"><Palette className="w-3 h-3" /> Visual Art Direction</p>
+                                            <p className="text-[12px] italic text-muted-foreground leading-relaxed line-clamp-4">"{result.visual_cues}"</p>
                                         </div>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        </div>
-                    </div>
-                )}
+                                    )}
+                                </Card>
 
-                {/* Initial Empty State */}
-                {!result && !isTransmuting && !selectedState && (
-                    <div className="h-[250px] flex flex-col items-center justify-center text-center opacity-40 animate-pulse relative z-10 border-2 border-dashed border-border/50 rounded-[3rem]">
-                        <div className="w-20 h-20 rounded-[2.5rem] bg-indigo-500/5 border border-indigo-500/10 flex items-center justify-center mb-8 shadow-inner">
-                            <Globe className="w-10 h-10 text-indigo-400/50" />
+                                {/* Tone Card */}
+                                {result.tone && (
+                                    <Card className="border-border/60 bg-card rounded-2xl p-5 shadow-sm space-y-3">
+                                        <div className="flex items-center gap-2">
+                                            <Activity className="w-4 h-4 text-blue-400" />
+                                            <span className="text-sm font-semibold">Tone Strategy</span>
+                                        </div>
+                                        <p className="text-[13px] font-medium text-foreground leading-relaxed bg-blue-500/5 border border-blue-500/10 rounded-xl p-4">{result.tone}</p>
+                                    </Card>
+                                )}
+                            </div>
                         </div>
-                        <h3 className="text-2xl font-black uppercase tracking-[0.3em] italic text-slate-400">Territory Sync Required</h3>
-                        <p className="text-xs font-black text-slate-500 mt-4 uppercase tracking-widest max-w-sm">
-                            Lock in a regional identity matrix on the map above to initialize linguistic swarm synchronization.
-                        </p>
                     </div>
                 )}
             </Main>

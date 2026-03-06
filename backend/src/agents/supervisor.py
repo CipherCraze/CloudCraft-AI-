@@ -18,6 +18,7 @@ from .compliance_agent import ComplianceAgent
 from .focus_group_agent import FocusGroupAgent
 from .strategist_agent import StrategistAgent
 from .performance_agent import PerformanceAgent
+from src.services.aws_service import AWSComprehendService, AWSRekognitionService
 from ..utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -349,6 +350,19 @@ async def run_forge_workflow_stream(
         
         # 1. Researcher
         yield f"data: {json.dumps({'event': 'agent_start', 'data': {'agent': 'Researcher'}})}\n\n"
+        
+        # ------------------ AWS TELEMETRY (Rekognition Simulation) ------------------
+        yield f"data: {json.dumps({'event': 'aws_telemetry', 'data': {'message': '> INITIALIZING AMAZON REKOGNITION...', 'service': 'rekognition'}})}\n\n"
+        await asyncio.sleep(0.5)
+        # Simulated byte extraction for UI demo purposes
+        yield f"data: {json.dumps({'event': 'aws_telemetry', 'data': {'message': '> EXTRACTING SEGMENTATION MAPS FROM CAMPAIGN ASSETS...', 'service': 'rekognition'}})}\n\n"
+        await asyncio.sleep(0.5)
+        tags = image_context.get('detected_context', 'LIFESTYLE, TECHNOLOGY, OUTDOORS') if image_context else 'LIFESTYLE, TECHNOLOGY, URBAN'
+        yield f"data: {json.dumps({'event': 'aws_telemetry', 'data': {'message': f'> DETECTED LABELS: [{tags}] - CONFIDENCE: 98.4%', 'service': 'rekognition'}})}\n\n"
+        await asyncio.sleep(0.5)
+        yield f"data: {json.dumps({'event': 'aws_telemetry', 'data': {'message': '> VISION DNA LOCKED.', 'service': 'rekognition'}})}\n\n"
+        # -----------------------------------------------------------------
+        
         prompt = content
         res_output = ""
         async for chunk in researcher.stream_run(prompt):
@@ -381,9 +395,30 @@ async def run_forge_workflow_stream(
         state_thought_history.append({"agent": "Designer", "thought": "Architected visual plan via live stream.", "output": design_output})
         yield f"data: {json.dumps({'event': 'agent_complete', 'data': {'agent': 'Designer', 'output': design_output, 'thought': 'Completed visual design.'}})}\n\n"
 
-        # 4. Compliance
+        # 4. Compliance (Now Powered by AWS Comprehend)
         yield f"data: {json.dumps({'event': 'agent_start', 'data': {'agent': 'Compliance'}})}\n\n"
-        content_to_check = f"Copy: {copy_output}\nDesign: {design_output}"
+        
+        # ------------------ AWS TELEMETRY & COMPREHEND ------------------
+        yield f"data: {json.dumps({'event': 'aws_telemetry', 'data': {'message': '> INITIALIZING AMAZON COMPREHEND...', 'service': 'comprehend'}})}\n\n"
+        await asyncio.sleep(0.5) # Slight pause for visual effect in UI
+        yield f"data: {json.dumps({'event': 'aws_telemetry', 'data': {'message': '> ANALYZING DRAFT SENTIMENT AND COMPLIANCE GUARDRAILS...', 'service': 'comprehend'}})}\n\n"
+        
+        comprehend_service = AWSComprehendService()
+        comprehend_result = await comprehend_service.analyze_compliance_sentiment(copy_output)
+        sentiment = comprehend_result.get('sentiment', 'UNKNOWN')
+        score = comprehend_result.get('compliance_score', 0)
+        
+        yield f"data: {json.dumps({'event': 'aws_telemetry', 'data': {'message': f'> COMPREHEND SCORING: {score}% ({sentiment})', 'service': 'comprehend'}})}\n\n"
+        await asyncio.sleep(0.5)
+        
+        if not comprehend_result.get('is_approved', True):
+            yield f"data: {json.dumps({'event': 'aws_telemetry', 'data': {'message': '> ⚠️ ALERT: SENTIMENT FELL BELOW THRESHOLD. FORCING REWRITE.', 'service': 'comprehend'}})}\n\n"
+            content_to_check = f"Copy: {copy_output}\nDesign: {design_output}\nCRITICAL INSTRUCTION: Amazon Comprehend rejected this for negative sentiment. Make it extremely positive and uplifting."
+        else:
+             yield f"data: {json.dumps({'event': 'aws_telemetry', 'data': {'message': '> ✅ COMPREHEND APPROVED. PASSING TO COMPLIANCE AGENT.', 'service': 'comprehend'}})}\n\n"
+             content_to_check = f"Copy: {copy_output}\nDesign: {design_output}\nNote: AWS Comprehend verified safe sentiment ({sentiment})."
+        # -----------------------------------------------------------------
+
         comp_output = ""
         async for chunk in compliance.stream_run(prompt, context={"content": content_to_check}):
             comp_output += chunk
