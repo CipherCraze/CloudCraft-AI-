@@ -14,7 +14,7 @@ async def predict_performance(request: OracleRequest):
 
     try:
         # Service is now async, so we await it directly
-        response = await OracleService.predict_performance(request.content)
+        response = await OracleService.predict_performance(request.content, request.visual_url)
         return response
 
     except Exception as e:

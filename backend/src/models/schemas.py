@@ -100,6 +100,7 @@ class CompetitorPulseResponse(BaseModel):
 # --- PERFORMANCE ORACLE SCHEMAS (NEW) ---
 class OracleRequest(BaseModel):
     content: str  # The draft post to analyze
+    visual_url: Optional[str] = None # Optional image/video URL for Rekognition
 
 class MetricScore(BaseModel):
     subject: str  # e.g., "Hook", "Trend", "Clarity"
@@ -110,12 +111,19 @@ class TimePoint(BaseModel):
     time: str     # e.g., "1h", "2h", "6h"
     engagement: int # Predicted value for Area Chart
 
+class VisualAudit(BaseModel):
+    labels: List[str]
+    sentiment: str
+    technical_quality: int # 0-100
+    recommendation: str
+
 class OracleResponse(BaseModel):
     viral_score: int
     confidence_level: str
     radar_data: List[MetricScore]
     forecast_data: List[TimePoint]
     analysis_report: str
+    visual_audit: Optional[VisualAudit] = None
     status: str = "success"
 
 class OracleHistoryItem(BaseModel):
