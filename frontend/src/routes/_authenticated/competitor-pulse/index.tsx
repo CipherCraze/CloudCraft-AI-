@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { useCampaignStore } from '@/stores/campaign-store'
+import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
@@ -9,7 +10,6 @@ import { toast } from 'sonner'
 import {
   Search,
   Zap,
-  Activity,
   Terminal,
   Eye,
   Headphones,
@@ -18,7 +18,6 @@ import {
   AlertTriangle,
   Globe,
   Cpu,
-  Layers,
   Loader2,
   Lock,
   ArrowRight,
@@ -56,6 +55,7 @@ export default function CompetitorPulsePage() {
   const [searchQuery, setSearchQuery] = useState('')
 
   const navigate = useNavigate()
+  const { injectIntelligence } = useCampaignStore()
 
   const bootSequence = [
     { label: "Initializing Intercept Pipeline", icon: <Cpu className="h-4 w-4" /> },
@@ -99,6 +99,7 @@ export default function CompetitorPulsePage() {
 
   const handleDeploy = () => {
     setDeploying(true)
+    injectIntelligence(result)
     toast.success("Intelligence Link Established", {
       description: "Asymmetric directives transferred to Architect core.",
       icon: <Rocket className="h-4 w-4" />,
@@ -132,11 +133,9 @@ export default function CompetitorPulsePage() {
       </Header>
 
       <Main className="px-4 py-8 md:px-8 max-w-[1400px] mx-auto space-y-10 relative w-full">
-        {/* Subtle Background Elements */}
         <div className="absolute inset-0 z-0 pointer-events-none opacity-[0.03] dark:opacity-[0.05]"
           style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, currentColor 1px, transparent 0)', backgroundSize: '32px 32px' }} />
 
-        {/* Page Header */}
         <div className="relative z-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
           <div className="space-y-2">
             <div className="inline-flex items-center px-2.5 py-0.5 rounded-full border border-primary/20 bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-widest gap-2">
@@ -168,7 +167,6 @@ export default function CompetitorPulsePage() {
           </div>
         </div>
 
-        {/* Tactical Search Interface */}
         <div className="relative z-10">
           <div className="flex flex-col md:flex-row gap-3">
             <div className="relative flex-1 group">
@@ -193,7 +191,6 @@ export default function CompetitorPulsePage() {
           </div>
         </div>
 
-        {/* Intelligence Context */}
         <div className="relative z-10 min-h-[400px]">
           {loading && (
             <div className="animate-in fade-in duration-500 flex flex-col items-center justify-center pt-20">
@@ -244,8 +241,6 @@ export default function CompetitorPulsePage() {
 
           {result && !loading && (
             <div className="space-y-10 animate-in fade-in slide-in-from-bottom-8 duration-700 ease-out">
-
-              {/* Identity Row */}
               <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
                 <Card className="lg:col-span-3 border-border/80 bg-card rounded-[2rem] p-10 flex flex-col justify-end min-h-[250px] relative overflow-hidden group shadow-sm transition-shadow hover:shadow-md">
                   <div className="absolute top-0 right-0 p-10 opacity-[0.03] group-hover:opacity-[0.08] transition-opacity duration-1000">
@@ -283,10 +278,7 @@ export default function CompetitorPulsePage() {
                 </Card>
               </div>
 
-              {/* Multi-modal Intelligence Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-
-                {/* Rekognition Intelligence */}
                 <Card className="rounded-[2rem] border-border/80 bg-card p-10 space-y-10 hover:shadow-lg transition-all border-l-4 border-l-indigo-500/40">
                   <div className="flex items-center justify-between">
                     <div className="p-3 bg-indigo-500/10 rounded-2xl">
@@ -311,7 +303,6 @@ export default function CompetitorPulsePage() {
                   </div>
                 </Card>
 
-                {/* Transcribe Intercepts */}
                 <Card className="rounded-[2rem] border-border/80 bg-card p-10 space-y-10 hover:shadow-lg transition-all border-l-4 border-l-sky-500/40">
                   <div className="flex items-center justify-between">
                     <div className="p-3 bg-sky-500/10 rounded-2xl">
@@ -333,7 +324,6 @@ export default function CompetitorPulsePage() {
                   </div>
                 </Card>
 
-                {/* Offensive Strategy Strike */}
                 <Card className="rounded-[2.5rem] border-primary/30 bg-gradient-to-br from-primary/[0.03] to-transparent p-10 flex flex-col justify-between group shadow-xl transition-all hover:scale-[1.01] lg:row-span-2">
                   <div className="space-y-10">
                     <div className="flex items-center gap-4">
@@ -359,7 +349,6 @@ export default function CompetitorPulsePage() {
                   </div>
                 </Card>
 
-                {/* Comprehend Sentiment Analysis */}
                 <Card className="rounded-[2rem] border-border/80 bg-card p-10 space-y-10 border-l-4 border-l-orange-500/40">
                   <div className="flex items-center justify-between">
                     <div className="p-3 bg-orange-500/10 rounded-2xl">
@@ -384,7 +373,6 @@ export default function CompetitorPulsePage() {
                   </div>
                 </Card>
 
-                {/* Market Poacher Segment */}
                 <Card className="rounded-[2rem] border-emerald-500/20 bg-emerald-500/[0.02] p-10 space-y-10 border-l-4 border-l-emerald-500/40 group hover:bg-emerald-500/[0.04] transition-all">
                   <div className="flex items-center justify-between">
                     <div className="p-3 bg-emerald-500/10 rounded-2xl">
@@ -400,7 +388,6 @@ export default function CompetitorPulsePage() {
                   </div>
                 </Card>
 
-                {/* Infrastructure Topology */}
                 <Card className="lg:col-span-2 rounded-[2.5rem] bg-muted/20 border-border/60 p-10 relative overflow-hidden">
                   <div className="absolute inset-0 z-0 opacity-[0.05]" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, currentColor 1px, transparent 0)', backgroundSize: '24px 24px' }} />
                   <div className="flex items-center justify-between relative z-10 mb-10">
@@ -419,13 +406,11 @@ export default function CompetitorPulsePage() {
                         </div>
                       </div>
                     ))}
-                    {/* Static connecting line representation */}
                     <div className="absolute top-1/2 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-border to-transparent -translate-y-1/2 -z-1" />
                   </div>
                 </Card>
               </div>
 
-              {/* Deploy Directive Section */}
               <div className="pt-24 pb-48 flex flex-col items-center text-center space-y-12 relative z-10">
                 <div className="space-y-4">
                   <h3 className="text-5xl font-[1000] tracking-tighter uppercase leading-none text-foreground">Launch Market Strike</h3>
@@ -468,7 +453,6 @@ export default function CompetitorPulsePage() {
             </div>
           )}
 
-          {/* Initial State */}
           {!result && !loading && !error && (
             <div className="flex flex-col items-center justify-center py-40 animate-in fade-in duration-1000">
               <div className="relative h-64 w-64 mb-16 flex items-center justify-center">

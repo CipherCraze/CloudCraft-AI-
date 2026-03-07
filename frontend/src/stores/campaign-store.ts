@@ -83,6 +83,7 @@ interface CampaignState {
     radarScanning: boolean
     radarResult: any | null
     radarLogs: { ts: string; text: string }[]
+    intelligencePayload: any | null
 
     fetchCampaigns: () => Promise<void>
     createCampaign: (data: { name: string; goal: string; duration: string; budget: string }) => Promise<void>
@@ -91,6 +92,7 @@ interface CampaignState {
     runRadarScan: (campaignId: string) => Promise<void>
     setActiveCampaign: (campaign: Campaign | null) => void
     resetPipeline: () => void
+    injectIntelligence: (payload: any) => void
 }
 
 const API_BASE = 'http://localhost:8000/api/v1/campaigns'
@@ -125,6 +127,7 @@ export const useCampaignStore = create<CampaignState>()((set, get) => ({
     radarScanning: false,
     radarResult: null,
     radarLogs: [] as { ts: string; text: string }[],
+    intelligencePayload: null,
 
     fetchCampaigns: async () => {
         set({ isFetching: true, error: null })
@@ -362,4 +365,8 @@ export const useCampaignStore = create<CampaignState>()((set, get) => ({
         get().resetPipeline()
         set({ activeCampaign: campaign })
     },
+
+    injectIntelligence: (payload) => {
+        set({ intelligencePayload: payload })
+    }
 }))

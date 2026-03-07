@@ -375,7 +375,8 @@ export default function CampaignArchitectPage() {
   const {
     campaigns, activeCampaign, isFetching, isSaving, isGenerating,
     fetchCampaigns, createCampaign, setActiveCampaign,
-    streamIntelligence, pipelineRunning, pipelineComplete, steps, runElapsed
+    streamIntelligence, pipelineRunning, pipelineComplete, steps, runElapsed,
+    intelligencePayload, injectIntelligence
   } = useCampaignStore()
 
   const [isCreating, setIsCreating] = useState(false)
@@ -384,6 +385,31 @@ export default function CampaignArchitectPage() {
   const [formData, setFormData] = useState({ name: '', goal: '', duration: '', budget: '' })
 
   useEffect(() => { fetchCampaigns() }, [])
+
+  // ── Intelligence Automation ──
+  useEffect(() => {
+    if (intelligencePayload) {
+      const competitor = intelligencePayload.competitor_handle || 'Target'
+      const vulnerability = intelligencePayload.sensory_layer?.comprehend?.critical_vulnerability || ''
+      const strike = intelligencePayload.agent_swarm?.red_team?.undercut_strategy || ''
+
+      setFormData({
+        name: `Counter-Strike: ${competitor}`,
+        goal: `Exploit market vulnerability: "${vulnerability}". Executive directive: ${strike}. Synthesize a high-conversion counter-offensive to capture market share.`,
+        duration: '4 Weeks',
+        budget: ''
+      })
+      setIsCreating(true)
+
+      // Clear the payload so it doesn't re-trigger
+      injectIntelligence(null)
+
+      toast.info('Intelligence Payload Active', {
+        description: `Drafting counter-strike against ${competitor} based on intercepted vulnerabilities.`,
+        icon: <Target className="h-4 w-4" />
+      })
+    }
+  }, [intelligencePayload, injectIntelligence])
 
   const handleCreate = async () => {
     if (!formData.name || !formData.goal) return toast.error('Name and Goal are required')
