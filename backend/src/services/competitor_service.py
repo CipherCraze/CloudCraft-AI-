@@ -86,46 +86,46 @@ class CompetitorService:
                 # Hackathon Fallback Data
                 fallback = {
                     "competitor_handle": query,
-                    "threat_level": 92,
+                    "threat_level": 98,
                     "sensory_layer": {
                         "rekognition": {
-                            "visual_themes": ["High contrast typography", "Aggressive micro-animations on CTA", "Desaturated backgrounds with neon focal points"],
-                            "color_palette": "Deep Obsidian / Electric Cyan / Warning Red",
-                            "target_demographic_visuals": "High-velocity founders and elite engineers"
+                            "visual_themes": ["Neo-Brutalist High Contrast", "Kinetic micro-interactions", "Desaturated focal point typography"],
+                            "color_palette": "Deep Obsidian / Electric Crimson / Ghost White",
+                            "target_demographic_visuals": "Post-economic technical founders and high-throughput growth engineers"
                         },
                         "transcribe": {
-                            "sonic_hooks": ["'The fatal mistake 90% of agencies make...'", "'We hacked the algorithm doing this one thing...'"],
-                            "frequent_keywords": ["Asymmetric advantage", "Zero friction", "Infinite scale", "10x ROI"]
+                            "sonic_hooks": ["'The fatal architectural flaw in incumbent pipelines...'", "'Why your current LTV/CAC ratio is a terminal liability...'"],
+                            "frequent_keywords": ["Asymmetric Arbitrage", "Vertical Moat", "Supply-side Hijack", "Infinite Scale"]
                         },
                         "comprehend": {
-                            "critical_vulnerability": "Subfidelic retention: Users churn at day 14 due to immense onboarding friction and lack of human-in-the-loop support.",
-                            "negative_sentiment_score": 88,
-                            "user_complaints": ["Takes 3 weeks to configure the API", "Documentation is a maze", "Customer success ignores tickets"]
+                            "critical_vulnerability": "Subfidelic retention friction: Infrastructure suffers from 400ms 'Onboarding Latency', leading to an 18% day-1 drop-off that their team is misattributing to UX.",
+                            "negative_sentiment_score": 96,
+                            "user_complaints": ["API documentation is a circular maze", "Legacy per-seat tax penalizes team expansion", "Customer support latency exceeds 48 hours"]
                         }
                     },
                     "agent_swarm": {
                         "red_team": {
-                            "pricing_vulnerability": "They penalize growth with aggressive per-seat pricing. As teams scale, their software becomes a massive liability.",
-                            "undercut_strategy": "Launch an 'Infinite Ops' zero-seat-tax campaign. Target their mid-market customers with a flat-fee migration tool."
+                            "pricing_vulnerability": "Their per-seat monolithic pricing is a legacy anchor that penalizes their most successful customers.",
+                            "undercut_strategy": "Execute a 'Infinite Ops' zero-seat-tax pivot. Offer a flat-fee migration wedge to capture their enterprise mid-market."
                         },
                         "tech_sniffer": {
-                            "detected_stack": ["React 17 (Legacy)", "Webpack (Slow Builds)", "Heavy Client-Side Rendering"],
-                            "migration_target": "Enterprise CTOs experiencing 'Core Web Vitals' ranking penalties from their bloated infrastructure."
+                            "detected_stack": ["React 17 Legacy", "Monolithic Middleware", "High-latency API Gateway"],
+                            "migration_target": "CTOs facing 'Core Web Vitals' ranking penalties due to the competitor's bloated infrastructure."
                         },
                         "customer_poacher": {
-                            "attack_angle": "Focus exclusively on their infamous 14-day integration delay. Our Deploy Counter-Strike will promise 'From signup to production in 42 seconds.'",
-                            "zero_day_ad_copy": "Still waiting for [Competitor] to approve your API key? Our customers just deployed their 4th server while you read this."
+                            "attack_angle": "The psychological 'Zero-Day' exploit: Position our 42-second deployment as the only career-safe alternative to their 3-week integration delay.",
+                            "zero_day_ad_copy": "Still waiting for [Competitor] to approve your API key? Our users just deployed their 4th production cluster while you read this."
                         }
                     },
                     "threat_graph": {
                         "nodes": [
-                            {"id": "c1", "label": f"{query.capitalize()} HQ", "type": "Competitor"},
-                            {"id": "e1", "label": "Sequoia Capital", "type": "Investor"},
-                            {"id": "t1", "label": "Legacy Monolith Cluster", "type": "Tech"}
+                            {"id": "c1", "label": f"{query.capitalize()} Global", "type": "Competitor"},
+                            {"id": "e1", "label": "Tier-1 VC Funding", "type": "Investor"},
+                            {"id": "t1", "label": "Legacy Monolith Cluster", "type": "Infrastructure"}
                         ],
                         "links": [
                             {"source": "c1", "target": "e1", "relationship": "Dependent Funding"},
-                            {"source": "c1", "target": "t1", "relationship": "Technical Debt Anchor"}
+                            {"source": "c1", "target": "t1", "relationship": "Structural Tech Debt"}
                         ]
                     }
                 }
