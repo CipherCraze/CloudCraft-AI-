@@ -39,38 +39,62 @@ class BrandProfile(BaseModel):
 class CompetitorRequest(BaseModel):
     query: str  # The handle or niche
 
-class WinningPatterns(BaseModel):
-    hooks: List[str]
-    visual_secret: str
-    psychology: str
+class SensoryRekognition(BaseModel):
+    visual_themes: List[str]
+    color_palette: str
+    target_demographic_visuals: str
 
-class SWOTAnalysis(BaseModel):
-    strengths: List[str]
-    weaknesses: List[str]
-    opportunities: List[str]
-    threats: List[str]
+class SensoryTranscribe(BaseModel):
+    sonic_hooks: List[str]
+    frequent_keywords: List[str]
 
-class CounterPlay(BaseModel):
-    the_pivot: str
-    content_series_concept: Any # Can be str or dict
-    execution_difficulty: str
+class SensoryComprehend(BaseModel):
+    critical_vulnerability: str
+    negative_sentiment_score: int
+    user_complaints: List[str]
 
-class SuggestedAsset(BaseModel):
-    type: str # Reel, Post, Thread
-    headline: str
-    script_outline: Any # Can be str or list of steps
-    visual_vibe: str
-    impact_prediction: str
+class PanopticonSensoryLayer(BaseModel):
+    rekognition: SensoryRekognition
+    transcribe: SensoryTranscribe
+    comprehend: SensoryComprehend
+
+class AgentRedTeam(BaseModel):
+    pricing_vulnerability: str
+    undercut_strategy: str
+
+class AgentTechSniffer(BaseModel):
+    detected_stack: List[str]
+    migration_target: str
+
+class AgentCustomerPoacher(BaseModel):
+    attack_angle: str
+    zero_day_ad_copy: str
+
+class PanopticonAgentSwarm(BaseModel):
+    red_team: AgentRedTeam
+    tech_sniffer: AgentTechSniffer
+    customer_poacher: AgentCustomerPoacher
+
+class ThreatNode(BaseModel):
+    id: str
+    label: str
+    type: str # 'Competitor', 'Executive', 'Investor', 'Tech'
+
+class ThreatLink(BaseModel):
+    source: str
+    target: str
+    relationship: str
+
+class PanopticonThreatGraph(BaseModel):
+    nodes: List[ThreatNode]
+    links: List[ThreatLink]
 
 class CompetitorPulseResponse(BaseModel):
     competitor_handle: str
-    threat_level: int
-    competitor_status: str
-    intelligence_brief: str
-    winning_patterns: WinningPatterns
-    swot: SWOTAnalysis
-    counter_play: CounterPlay
-    suggested_assets: List[SuggestedAsset]
+    threat_level: int # 0-100 indicating danger to our market share
+    sensory_layer: PanopticonSensoryLayer
+    agent_swarm: PanopticonAgentSwarm
+    threat_graph: PanopticonThreatGraph
     status: str = "success"
 
 # --- PERFORMANCE ORACLE SCHEMAS (NEW) ---
