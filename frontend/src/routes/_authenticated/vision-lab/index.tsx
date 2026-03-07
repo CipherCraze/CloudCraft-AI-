@@ -7,9 +7,9 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import {
-  Sparkles, Download, Loader2, Wand2, Camera,
+  Sparkles, Download, Loader2, Camera,
   ArrowRight, Maximize2, CheckCircle2, RefreshCw,
-  Eye, Upload, X, Copy, Zap, Search as SearchIcon, Aperture, ScanLine, Layers
+  Eye, Upload, Copy, Zap, Aperture, ScanLine, Layers
 } from "lucide-react"
 import { VisionAudit } from "@/components/persona/VisionAudit"
 import { toast } from "sonner"
@@ -19,7 +19,6 @@ import { Main } from '@/components/layout/main'
 import { TopNav } from '@/components/layout/top-nav'
 import { ProfileDropdown } from '@/components/profile-dropdown'
 import { ThemeSwitch } from '@/components/theme-switch'
-import { Input } from '@/components/ui/input'
 
 const topNav = [
   { title: 'Overview', href: '/dashboard', isActive: false, disabled: false },
@@ -57,7 +56,6 @@ type ResultTab = 'visual' | 'audit'
 export default function VisionLabPage() {
   const [mode, setMode] = useState<VisionMode | null>(null)
   const [prompt, setPrompt] = useState("")
-  const [searchQuery, setSearchQuery] = useState("")
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<{ image_url: string; refined_prompt: string } | null>(null)
   const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null)
@@ -72,8 +70,6 @@ export default function VisionLabPage() {
 
   const hasResult = !!(result || enhancedResult)
   const finalImageUrl = enhancedResult?.enhanced_image_url || result?.image_url
-  const isProcessing = loading || enhancing
-
   const resetAll = () => {
     setMode(null); setPrompt(""); setResult(null); setImageAnalysis(null)
     setUploadedImageUrl(null); setUploadedImageBase64(null); setEnhancedResult(null)
