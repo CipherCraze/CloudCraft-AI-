@@ -100,3 +100,145 @@
     height: 0;
   }
 }
+
+/* ── Scout Mission Control Animations ── */
+
+@keyframes radar-expand {
+  0% {
+    transform: scale(0.3);
+    opacity: 0.8;
+  }
+
+  100% {
+    transform: scale(2.8);
+    opacity: 0;
+  }
+}
+
+@keyframes decode-in {
+  0% {
+    opacity: 0;
+    transform: translateX(-12px) skewX(-4deg);
+    filter: blur(4px);
+  }
+
+  60% {
+    opacity: 1;
+    filter: blur(0);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateX(0) skewX(0);
+  }
+}
+
+@keyframes log-slide-in {
+  0% {
+    opacity: 0;
+    transform: translateX(-8px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes arc-draw {
+  0% {
+    stroke-dashoffset: 226;
+  }
+
+  100% {
+    stroke-dashoffset: var(--arc-target);
+  }
+}
+
+@keyframes neon-pulse {
+
+  0%,
+  100% {
+    box-shadow: 0 0 6px 1px var(--glow-color, #22d3ee44);
+  }
+
+  50% {
+    box-shadow: 0 0 18px 4px var(--glow-color, #22d3ee88);
+  }
+}
+
+@keyframes step-line-fill {
+  0% {
+    height: 0%;
+  }
+
+  100% {
+    height: 100%;
+  }
+}
+
+@keyframes count-up-flash {
+  0% {
+    color: #facc15;
+  }
+
+  100% {
+    color: inherit;
+  }
+}
+
+@keyframes hook-rise {
+  0% {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes hot-signal-pulse {
+
+  0%,
+  100% {
+    border-color: #ef444466;
+  }
+
+  50% {
+    border-color: #ef4444cc;
+  }
+}
+
+.scout-radar-ring {
+  animation: radar-expand 2.4s ease-out infinite;
+}
+
+.scout-radar-ring:nth-child(2) {
+  animation-delay: 0.8s;
+}
+
+.scout-radar-ring:nth-child(3) {
+  animation-delay: 1.6s;
+}
+
+.scout-decode {
+  animation: decode-in 0.4s ease-out both;
+}
+
+.scout-log-line {
+  animation: log-slide-in 0.2s ease-out both;
+}
+
+.scout-hook-rise {
+  animation: hook-rise 0.5s ease-out both;
+}
+
+.scout-neon {
+  animation: neon-pulse 2s ease-in-out infinite;
+}
+
+.scout-hot-banner {
+  animation: hot-signal-pulse 1.5s ease-in-out infinite;
+}

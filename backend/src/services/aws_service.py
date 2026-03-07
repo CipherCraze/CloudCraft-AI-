@@ -2,7 +2,8 @@ import boto3
 import json
 import uuid
 from datetime import datetime
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
+from botocore.exceptions import ClientError
 from src.utils.logger import get_logger
 from src.core.config import settings
 
@@ -314,7 +315,8 @@ class AWSDynamoDBService:
 
 class AWSComprehendService:
     """
-    AWS Comprehend service for sentiment analysis and compliance guarding.
+    AWS Comprehend service for sentiment analysis, entity extraction, and key phrase detection.
+    Used by both the Forge compliance pipeline and the Scout agentic pipeline.
     """
     def __init__(self):
         self.comprehend = boto3.client(
@@ -327,21 +329,19 @@ class AWSComprehendService:
     async def analyze_compliance_sentiment(self, text: str) -> Dict[str, Any]:
         """
         Analyzes script sentiment to guard against negative/inappropriate localized output.
+        Used by Forge compliance pipeline.
         """
         try:
             logger.info("📡 [AWS TELEMETRY] Initializing Amazon Comprehend Sentiment Analysis...")
-            # Comprehend has a 5000 byte limit for DetectSentiment
-            checked_text = text[:4900] 
+            checked_text = text[:4900]
             
             response = self.comprehend.detect_sentiment(
                 Text=checked_text,
-                LanguageCode='en'  # Assuming the translation prompt gives english notes too, or run native language if supported
+                LanguageCode='en'
             )
             
             sentiment = response['Sentiment']
             scores = response['SentimentScore']
-            
-            # Guard logic: If negative sentiment is > 50%, flag it.
             compliance_score = (scores['Positive'] + scores['Neutral']) * 100
             
             logger.info(f"📡 [AWS TELEMETRY] Comprehend Compliance Score: {compliance_score:.1f}% ({sentiment})")
@@ -354,9 +354,323 @@ class AWSComprehendService:
             }
         except Exception as e:
             logger.error(f"AWS Comprehend failed: {str(e)}")
-            # Fallback to approve for local demo if AWS isn't fully set up
             return {
                 "sentiment": "UNKNOWN",
                 "compliance_score": 100.0,
                 "is_approved": True
             }
+
+    async def analyze_scout_intelligence(self, raw_text: str) -> Dict[str, Any]:
+        """
+        Full NLP enrichment pipeline for Scout agent.
+        Runs detect_sentiment + detect_key_phrases + detect_entities in parallel.
+        Returns a structured intelligence package that the Synthesis agent uses.
+        """
+        logger.info("📡 [SCOUT-COMPREHEND] Running full NLP intelligence extraction...")
+        # Comprehend max 5000 bytes per call
+        safe_text = raw_text[:4900]
+
+        # --- Sentiment ---
+        sentiment_result = {"sentiment": "NEUTRAL", "scores": {}, "compliance_score": 75.0}
+        try:
+            sent_resp = self.comprehend.detect_sentiment(Text=safe_text, LanguageCode='en')
+            scores = sent_resp['SentimentScore']
+            compliance_score = round((scores['Positive'] + scores['Neutral']) * 100, 1)
+            sentiment_result = {
+                "sentiment": sent_resp['Sentiment'],
+                "scores": scores,
+                "compliance_score": compliance_score
+            }
+            logger.info(f"📡 [SCOUT-COMPREHEND] Sentiment: {sent_resp['Sentiment']} | Score: {compliance_score}%")
+        except Exception as e:
+            logger.warning(f"Comprehend sentiment failed: {e}")
+
+        # --- Key Phrases ---
+        key_phrases: List[str] = []
+        try:
+            kp_resp = self.comprehend.detect_key_phrases(Text=safe_text, LanguageCode='en')
+            key_phrases = [
+                p['Text'] for p in kp_resp.get('KeyPhrases', [])
+                if p.get('Score', 0) > 0.85
+            ][:12]  # Top 12 high-confidence phrases
+            logger.info(f"📡 [SCOUT-COMPREHEND] Extracted {len(key_phrases)} key phrases")
+        except Exception as e:
+            logger.warning(f"Comprehend key phrases failed: {e}")
+
+        # --- Entities ---
+        entities: List[Dict[str, str]] = []
+        try:
+            ent_resp = self.comprehend.detect_entities(Text=safe_text, LanguageCode='en')
+            # Focus on high-value entity types for local intelligence
+            wanted_types = {"EVENT", "LOCATION", "PERSON", "ORGANIZATION", "DATE"}
+            entities = [
+                {"text": e['Text'], "type": e['Type'], "score": round(e['Score'], 2)}
+                for e in ent_resp.get('Entities', [])
+                if e['Type'] in wanted_types and e.get('Score', 0) > 0.85
+            ][:10]
+            logger.info(f"📡 [SCOUT-COMPREHEND] Detected {len(entities)} entities")
+        except Exception as e:
+            logger.warning(f"Comprehend entities failed: {e}")
+
+        return {
+            "sentiment": sentiment_result["sentiment"],
+            "compliance_score": sentiment_result["compliance_score"],
+            "sentiment_scores": sentiment_result["scores"],
+            "key_phrases": key_phrases,
+            "entities": entities,
+        }
+
+
+class AWSSNSService:
+    """
+    AWS SNS service for autonomous hot signal alerts.
+    Scout agent triggers this when viral_score exceeds threshold — no human involvement.
+    """
+    def __init__(self):
+        self.sns = boto3.client(
+            'sns',
+            aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+            aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+            region_name=settings.AWS_REGION
+        )
+        self.topic_arn = settings.AWS_SNS_TOPIC_ARN
+
+    async def publish_hot_signal(self, city: str, viral_score: int, insights: Dict[str, Any]) -> bool:
+        """
+        Fires an autonomous real-time SNS alert when the Scout detects a hot trend signal.
+        This is called by the agent itself — no human trigger.
+        """
+        if not self.topic_arn:
+            logger.warning("[SNS] No topic ARN configured — skipping hot signal")
+            return False
+
+        hooks_text = "\n".join(
+            [f"  → {h.get('title', '')}: {h.get('description', '')[:80]}"
+             for h in insights.get('viral_hooks', [])[:3]]
+        )
+        hashtags = " ".join(insights.get('trending_hashtags', []))
+
+        message = (
+            f"🔥 CLOUDCRAFT AI — HOT SIGNAL ALERT\n"
+            f"{'='*50}\n\n"
+            f"🛰️  Scout Agent detected a HIGH-VIRAL opportunity:\n"
+            f"📍 Location:     {city}\n"
+            f"📊 Viral Score:  {viral_score}/100\n"
+            f"🕒 Detected At:  {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}\n\n"
+            f"--- TOP VIRAL HOOKS ---\n{hooks_text}\n\n"
+            f"--- LOCAL VIBE ---\n{insights.get('local_vibe', 'N/A')}\n\n"
+            f"--- TRENDING HASHTAGS ---\n{hashtags}\n\n"
+            f"--- MISSION ---\n{insights.get('strategic_recommendation', 'N/A')}\n\n"
+            f"{'='*50}\n"
+            f"Dispatched AUTONOMOUSLY by CloudCraft AI Scout Agent.\n"
+            f"No human pressed a button. The agent decided this was worth your attention.\n"
+            f"AWS Account: 500053636944 | Region: {settings.AWS_REGION}"
+        )
+
+        try:
+            response = self.sns.publish(
+                TopicArn=self.topic_arn,
+                Message=message,
+                Subject=f"🔥 HOT SIGNAL: {city} Viral Score {viral_score}/100 — Act NOW"
+            )
+            logger.info(f"[SNS] Hot signal dispatched for {city} | MessageId: {response['MessageId']}")
+            return True
+        except Exception as e:
+            logger.error(f"[SNS] Failed to publish hot signal: {e}")
+            return False
+
+
+class ScoutDynamoDBService:
+    """
+    DynamoDB service for Scout run memory.
+    Stores every scout run per city — enables cross-run trend delta computation.
+    This is what makes the Scout agent truly agentic: it remembers and learns.
+    Table: cloudcraft-scout-memory
+    Schema: PK=city (S), SK=timestamp (S)
+    """
+    TABLE_NAME = "cloudcraft-scout-memory"
+
+    def __init__(self):
+        self.dynamodb = boto3.resource(
+            'dynamodb',
+            aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+            aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+            region_name=settings.AWS_REGION
+        )
+        self._table = None
+
+    def _get_table(self):
+        """Lazy-load table, auto-creating it if it doesn't exist (free tier PAY_PER_REQUEST)."""
+        if self._table:
+            return self._table
+        try:
+            table = self.dynamodb.Table(self.TABLE_NAME)
+            table.load()  # Raises ResourceNotFoundException if missing
+            logger.info(f"[ScoutDB] Connected to table: {self.TABLE_NAME}")
+            self._table = table
+        except ClientError as e:
+            if e.response['Error']['Code'] == 'ResourceNotFoundException':
+                logger.info(f"[ScoutDB] Table {self.TABLE_NAME} not found — auto-creating...")
+                try:
+                    table = self.dynamodb.create_table(
+                        TableName=self.TABLE_NAME,
+                        KeySchema=[
+                            {'AttributeName': 'city', 'KeyType': 'HASH'},
+                            {'AttributeName': 'timestamp', 'KeyType': 'RANGE'}
+                        ],
+                        AttributeDefinitions=[
+                            {'AttributeName': 'city', 'AttributeType': 'S'},
+                            {'AttributeName': 'timestamp', 'AttributeType': 'S'}
+                        ],
+                        BillingMode='PAY_PER_REQUEST'  # Always free tier compatible
+                    )
+                    table.wait_until_exists()
+                    logger.info(f"[ScoutDB] ✅ Table {self.TABLE_NAME} created successfully")
+                    self._table = table
+                except ClientError as ce:
+                    if ce.response['Error']['Code'] == 'ResourceInUseException':
+                        self._table = self.dynamodb.Table(self.TABLE_NAME)
+                    else:
+                        raise ce
+            else:
+                raise e
+        return self._table
+
+    async def save_scout_run(
+        self,
+        city: str,
+        insights: Dict[str, Any],
+        comprehend_data: Dict[str, Any],
+        viral_score: int,
+        lat: float = 0.0,
+        lng: float = 0.0
+    ) -> str:
+        """Persists a completed scout run to DynamoDB memory."""
+        try:
+            table = self._get_table()
+            run_id = str(uuid.uuid4())[:8]
+            timestamp = datetime.utcnow().isoformat()
+
+            item = {
+                "city": city.lower().strip(),
+                "timestamp": timestamp,
+                "run_id": run_id,
+                "lat": str(lat),
+                "lng": str(lng),
+                "viral_score": viral_score,
+                "local_vibe": insights.get("local_vibe", "")[:300],
+                "strategic_recommendation": insights.get("strategic_recommendation", "")[:300],
+                "viral_hooks": json.dumps(insights.get("viral_hooks", [])[:3]),
+                "trending_hashtags": json.dumps(insights.get("trending_hashtags", [])),
+                "comprehend_sentiment": comprehend_data.get("sentiment", "UNKNOWN"),
+                "comprehend_score": str(comprehend_data.get("compliance_score", 0)),
+                "key_phrases": json.dumps(comprehend_data.get("key_phrases", [])[:8]),
+                "entities": json.dumps(comprehend_data.get("entities", [])[:5]),
+            }
+
+            table.put_item(Item=item)
+            logger.info(f"[ScoutDB] ✅ Saved scout run {run_id} for '{city}' at {timestamp}")
+            return run_id
+        except Exception as e:
+            logger.error(f"[ScoutDB] Failed to save scout run: {e}")
+            return ""
+
+    async def get_past_scout_runs(self, city: str, limit: int = 5) -> List[Dict[str, Any]]:
+        """
+        Retrieves the N most recent scout runs for a city.
+        Used by the Memory Agent step to compute trend deltas.
+        """
+        try:
+            table = self._get_table()
+            response = table.query(
+                KeyConditionExpression=boto3.dynamodb.conditions.Key('city').eq(city.lower().strip()),
+                ScanIndexForward=False,  # Most recent first
+                Limit=limit
+            )
+            items = response.get('Items', [])
+
+            # Deserialize JSON fields
+            for item in items:
+                for field in ['viral_hooks', 'trending_hashtags', 'key_phrases', 'entities']:
+                    if field in item and isinstance(item[field], str):
+                        try:
+                            item[field] = json.loads(item[field])
+                        except Exception:
+                            item[field] = []
+                if 'viral_score' in item:
+                    item['viral_score'] = int(item['viral_score'])
+
+            logger.info(f"[ScoutDB] Retrieved {len(items)} past runs for '{city}'")
+            return items
+        except Exception as e:
+            logger.warning(f"[ScoutDB] Could not retrieve history for '{city}': {e}")
+            return []
+
+    def compute_trend_delta(self, current_insights: Dict[str, Any], past_runs: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """
+        Computes what's NEW vs RECURRING vs FADING compared to past scout runs.
+        This is the 'memory' that makes the agent feel intelligent.
+        """
+        if not past_runs:
+            return {
+                "is_first_run": True,
+                "new_hooks": [],
+                "recurring_hooks": [],
+                "new_hashtags": [],
+                "score_trend": "BASELINE",
+                "past_runs_count": 0
+            }
+
+        # Collect all past hook titles and hashtags (lowercased)
+        past_hook_titles = set()
+        past_hashtags = set()
+        past_scores = []
+
+        for run in past_runs:
+            hooks = run.get('viral_hooks', [])
+            if isinstance(hooks, list):
+                for h in hooks:
+                    if isinstance(h, dict):
+                        past_hook_titles.add(h.get('title', '').lower())
+            tags = run.get('trending_hashtags', [])
+            if isinstance(tags, list):
+                for t in tags:
+                    past_hashtags.add(t.lower())
+            if run.get('viral_score'):
+                past_scores.append(int(run['viral_score']))
+
+        # Classify current hooks
+        current_hooks = current_insights.get('viral_hooks', [])
+        new_hooks = []
+        recurring_hooks = []
+        for hook in current_hooks:
+            if isinstance(hook, dict):
+                title = hook.get('title', '').lower()
+                if title in past_hook_titles:
+                    recurring_hooks.append(hook.get('title', ''))
+                else:
+                    new_hooks.append(hook.get('title', ''))
+
+        # Classify current hashtags
+        current_tags = current_insights.get('trending_hashtags', [])
+        new_hashtags = [t for t in current_tags if t.lower() not in past_hashtags]
+
+        # Score trend
+        current_score = current_insights.get('sentiment_score', 50)
+        avg_past = sum(past_scores) / len(past_scores) if past_scores else current_score
+        if current_score > avg_past + 10:
+            score_trend = "RISING"
+        elif current_score < avg_past - 10:
+            score_trend = "FALLING"
+        else:
+            score_trend = "STABLE"
+
+        return {
+            "is_first_run": False,
+            "new_hooks": new_hooks,
+            "recurring_hooks": recurring_hooks,
+            "new_hashtags": new_hashtags,
+            "score_trend": score_trend,
+            "avg_past_score": round(avg_past, 1),
+            "past_runs_count": len(past_runs)
+        }
