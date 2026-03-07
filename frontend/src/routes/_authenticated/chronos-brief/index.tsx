@@ -47,7 +47,57 @@ function ChronosBriefPageContent() {
   // Active Mission State
   const [mission, setMission] = useState<any>(null)
   const [loading, setLoading] = useState(false)
-  const [terminalIndex, setTerminalIndex] = useState(0)
+  const [selectedDay, setSelectedDay] = useState(1)
+  const [pushedTasks, setPushedTasks] = useState<Record<string, boolean>>({})
+
+  // Update selected day when mission loads
+  useEffect(() => {
+    if (mission?.current_day) {
+      setSelectedDay(mission.current_day)
+    }
+  }, [mission])
+
+  const getTaskLocation = (theme: string, tasks: any[]) => {
+    const combinedDesc = tasks.map(t => `${t.content_type} ${t.description}`).join(' ').toLowerCase();
+
+    if (combinedDesc.includes('image') || combinedDesc.includes('photo') || combinedDesc.includes('graphic') || combinedDesc.includes('video') || combinedDesc.includes('reel') || combinedDesc.includes('banner')) {
+      return {
+        id: 'vision',
+        label: 'Push to Vision Lab',
+        route: `/vision-lab?autofill=true&prompt=${encodeURIComponent(theme)}`,
+        icon: <Eye className="h-3 w-3 ml-2" />
+      }
+    } else if (combinedDesc.includes('post') || combinedDesc.includes('blog') || combinedDesc.includes('article') || combinedDesc.includes('copy') || combinedDesc.includes('email') || combinedDesc.includes('newsletter')) {
+      return {
+        id: 'forge',
+        label: 'Push to Forge',
+        route: `/forge?autofill=true&prompt=${encodeURIComponent(`Write a ${theme} for my campaign.`)}`,
+        icon: <Hammer className="h-3 w-3 ml-2" />
+      }
+    } else {
+      const desc = tasks.map((t: any) => `${t.content_type} on ${t.platform}: ${t.description}`).join(' | ')
+      return {
+        id: 'architect',
+        label: 'Push to Campaign Architect',
+        route: `/campaign-architect?autofill=true&task=${encodeURIComponent(theme)}&desc=${encodeURIComponent(desc)}`,
+        icon: <Layers className="h-3 w-3 ml-2" />
+      }
+    }
+  }
+
+  const handlePushTask = (theme: string, uniqueId: string, tasks: any[]) => {
+    const loc = getTaskLocation(theme, tasks);
+    const toastId = toast.loading(`Uplinking Task to ${loc.label.replace('Push to ', '')}...`)
+
+    setTimeout(() => {
+      toast.success(`Task successfully queued! Redirecting...`, { id: toastId })
+      setPushedTasks(prev => ({ ...prev, [uniqueId]: true }))
+      setTimeout(() => {
+        window.location.href = loc.route
+      }, 1000)
+    }, 1500)
+  }
+
 
   const deploySteps = [
     { label: "Intercepting Market Signals", icon: <Search className="h-4 w-4" /> },
@@ -572,59 +622,103 @@ function ChronosBriefPageContent() {
                       </div>
                     </div>
 
-                    <div className="space-y-6 pl-[88px] relative">
-                      <div className="absolute left-[134px] top-6 bottom-6 w-px bg-white/10 border-dashed border-l" />
-                      {(phase.days || phase.weeks || []).map((dayData: any, dIdx: number) => {
-                        const dayNum = dayData.day || dayData.week;
-                        return (
-                          <div key={dIdx} className="relative flex items-stretch gap-8 group/day">
-                            <div className="w-[40px] pt-6 shrink-0 text-right relative z-10">
-                              <div className="absolute right-[-36px] top-[28px] h-3 w-3 rounded-full bg-background border-2 border-white/20 group-hover/day:border-primary group-hover/day:bg-primary/20 group-hover/day:shadow-[0_0_15px_rgba(0,183,255,0.5)] transition-all box-content" />
-                              <div className="text-[11px] font-black uppercase tracking-widest text-primary italic">Day {dayNum}</div>
-                            </div>
+                    <div className="flex gap-8 relative mt-16">
+                      {/* Timeline Navigator (Left) */}
+                      <div className="w-[140px] md:w-[180px] shrink-0 border-r border-white/5 pr-4 md:pr-6 space-y-3 relative pb-10">
+                        <div className="absolute top-0 bottom-0 right-[-1px] w-px bg-gradient-to-b from-primary/50 via-primary/10 to-transparent" />
 
-                            <Card className="flex-1 bg-card/20 backdrop-blur-md border border-white/5 p-7 rounded-[2rem] shadow-xl hover:bg-white/[0.04] transition-all relative overflow-hidden">
-                              <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary/0 group-hover/day:bg-primary/50 transition-colors" />
-                              <div className="space-y-6 relative z-10 flex flex-col h-full">
-                                <div className="flex justify-between items-center">
-                                  <p className="text-sm font-black text-foreground uppercase tracking-widest italic">{dayData.theme}</p>
-                                </div>
-                                <div className="space-y-4 flex-1">
-                                  {(dayData.tasks || []).map((task: any, tIdx: number) => (
-                                    <div key={tIdx} className="flex gap-4 items-start border-l border-white/10 pl-5 hover:border-primary/50 transition-all cursor-pointer py-1">
-                                      <div className="space-y-3 w-full">
-                                        <div className="flex items-center justify-between w-full">
-                                          <div className="flex items-center gap-3">
-                                            <Badge variant="outline" className="text-[9px] font-bold uppercase tracking-widest px-2.5 py-0.5 border-white/10 text-muted-foreground bg-white/5 rounded-md">{task.platform}</Badge>
-                                            <span className="text-xs font-black uppercase tracking-widest text-foreground/90">{task.content_type}</span>
-                                          </div>
-                                          {task.expected_reach && task.expected_reach !== "N/A" && (
-                                            <div className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50 border border-white/5 px-2 py-0.5 rounded bg-black/20">
-                                              EST. REACH: {task.expected_reach}
-                                            </div>
-                                          )}
-                                        </div>
-                                        <p className="text-sm text-muted-foreground/80 leading-relaxed font-medium italic">"{task.description}"</p>
-                                      </div>
+                        {(phase.days || phase.weeks || []).map((dayData: any, dIdx: number) => {
+                          const dayNum = dayData.day || dayData.week;
+                          const isSelected = selectedDay === dayNum;
+                          const isPast = dayNum < (mission.current_day || 1);
+                          const isCurrent = dayNum === (mission.current_day || 1);
+
+                          return (
+                            <button
+                              key={dIdx}
+                              onClick={() => setSelectedDay(dayNum)}
+                              className={cn(
+                                "w-full text-left relative px-3 py-3 md:px-4 md:py-4 rounded-xl border transition-all overflow-visible block",
+                                isSelected ? 'bg-primary/10 border-primary text-primary shadow-[0_0_15px_rgba(0,183,255,0.15)]' : 'border-transparent text-muted-foreground hover:bg-white/5'
+                              )}
+                            >
+                              <div className="text-[10px] font-black uppercase tracking-widest opacity-60 mb-1 leading-none">Day {dayNum}</div>
+                              {isCurrent && <div className="text-[9px] font-bold text-amber-500 mb-1 leading-none uppercase">Today's Mission</div>}
+                              <div className={cn("text-xs font-bold leading-tight line-clamp-2", isSelected ? 'text-primary' : 'text-foreground/80')}>{dayData.theme}</div>
+
+                              {/* Glowing Status Dot on the Line */}
+                              <div className={cn(
+                                "absolute -right-[23px] md:-right-[31px] top-[14px] w-3 h-3 rounded-full border-2 bg-background z-10 transition-colors",
+                                isSelected ? "border-primary shadow-[0_0_10px_rgba(0,183,255,0.8)]" :
+                                  isPast ? "border-emerald-500 bg-emerald-500" :
+                                    isCurrent ? "border-amber-500 bg-amber-500 animate-pulse" : "border-white/20"
+                              )} />
+
+                            </button>
+                          )
+                        })}
+                      </div>
+
+                      {/* Selected Day Tasks (Right) */}
+                      <div className="flex-1 space-y-6">
+                        {(phase.days || phase.weeks || []).filter((d: any) => (d.day || d.week) === selectedDay).map((dayData: any, dIdx: number) => {
+                          const dayNum = dayData.day || dayData.week;
+                          const loc = getTaskLocation(dayData.theme, dayData.tasks || []);
+                          return (
+                            <div key={dIdx} className="relative flex items-stretch gap-8 group/day animate-in fade-in slide-in-from-right-4 duration-500">
+                              <Card className="flex-1 bg-card/20 backdrop-blur-md border border-white/5 p-7 rounded-[2rem] shadow-xl hover:bg-white/[0.04] transition-all relative overflow-hidden">
+                                <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary/0 group-hover/day:bg-primary/50 transition-colors" />
+                                <div className="space-y-6 relative z-10 flex flex-col h-full">
+                                  <div className="flex justify-between items-center">
+                                    <div>
+                                      <div className="text-[10px] font-black uppercase tracking-widest text-primary mb-1">Day {dayNum} Overview</div>
+                                      <p className="text-xl md:text-2xl font-black text-foreground uppercase tracking-widest italic">{dayData.theme}</p>
                                     </div>
-                                  ))}
+                                  </div>
+                                  <div className="space-y-4 flex-1">
+                                    {(dayData.tasks || []).map((task: any, tIdx: number) => (
+                                      <div key={tIdx} className="flex gap-4 items-start border-l-2 border-primary/20 pl-5 hover:border-primary transition-all py-2 bg-white/[0.01] rounded-r-lg pr-4">
+                                        <div className="space-y-3 w-full">
+                                          <div className="flex items-center justify-between w-full">
+                                            <div className="flex items-center gap-3">
+                                              <Badge variant="outline" className="text-[9px] font-bold uppercase tracking-widest px-2.5 py-0.5 border-white/10 text-muted-foreground bg-white/5 rounded-md">{task.platform}</Badge>
+                                              <span className="text-xs font-black uppercase tracking-widest text-foreground/90">{task.content_type}</span>
+                                            </div>
+                                            {task.expected_reach && task.expected_reach !== "N/A" && (
+                                              <div className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50 border border-white/5 px-2 py-0.5 rounded bg-black/20">
+                                                EST. REACH: {task.expected_reach}
+                                              </div>
+                                            )}
+                                          </div>
+                                          <p className="text-sm text-muted-foreground/80 leading-relaxed font-bold">"{task.description}"</p>
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                  <div className="pt-4 border-t border-white/5 flex justify-end">
+                                    {isAutomated ? (
+                                      <Button disabled className="h-10 px-6 rounded-xl bg-emerald-500/10 text-emerald-500 border-none text-[10px] font-black uppercase tracking-widest shadow-none opacity-80">
+                                        <Activity className="h-3 w-3 mr-2 animate-pulse" /> Natively Queued in Engines
+                                      </Button>
+                                    ) : pushedTasks[`${pIdx}-${dIdx}`] ? (
+                                      <Button disabled className="h-10 px-6 rounded-xl bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 text-[10px] font-black uppercase tracking-widest shadow-none gap-2">
+                                        <CheckCircle2 className="h-3 w-3" /> Queued in {loc.label.replace('Push to ', '')}
+                                      </Button>
+                                    ) : (
+                                      <Button
+                                        onClick={() => handlePushTask(dayData.theme, `${pIdx}-${dIdx}`, dayData.tasks || [])}
+                                        className="h-10 px-6 rounded-xl bg-primary hover:bg-primary/80 border border-transparent text-primary-foreground text-[10px] font-black uppercase tracking-widest transition-all shadow-lg shadow-primary/20 group/btn"
+                                      >
+                                        {loc.label} {loc.icon}
+                                      </Button>
+                                    )}
+                                  </div>
                                 </div>
-                                <div className="pt-4 border-t border-white/5 flex justify-end">
-                                  {isAutomated ? (
-                                    <Button disabled className="h-10 px-6 rounded-xl bg-emerald-500/10 text-emerald-500 border-none text-[10px] font-black uppercase tracking-widest shadow-none opacity-80">
-                                      <Activity className="h-3 w-3 mr-2 animate-pulse" /> Natively Queued in Engines
-                                    </Button>
-                                  ) : (
-                                    <Button className="h-10 px-6 rounded-xl bg-white/5 border border-white/5 text-[10px] font-black uppercase tracking-widest hover:bg-primary hover:text-primary-foreground hover:border-primary transition-all shadow-none group/btn">
-                                      Push to Campaign Architect <ArrowRight className="h-3 w-3 ml-2 group-hover/btn:translate-x-1 transition-transform" />
-                                    </Button>
-                                  )}
-                                </div>
-                              </div>
-                            </Card>
-                          </div>
-                        )
-                      })}
+                              </Card>
+                            </div>
+                          )
+                        })}
+                      </div>
                     </div>
                   </div>
                 ))}
