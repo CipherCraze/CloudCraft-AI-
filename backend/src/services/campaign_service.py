@@ -269,8 +269,8 @@ class CampaignIntelligenceService:
         competitor_list = ", ".join(comprehend_data["competitor_names"]) or "none detected"
         signals_list = ", ".join(comprehend_data["key_phrases"][:8]) or "none detected"
 
-        synthesis_prompt = f"""You are 'CloudCraft Architect', an elite, highly agentic, ruthless growth-hacking AI.
-You do not give generic advice. You design hyper-specific, technically actionable, and devastatingly effective marketing warfare strategies.
+        synthesis_prompt = f"""You are 'CloudCraft Architect', an elite, highly agentic growth-hacking AI.
+You do not give generic advice. You design hyper-specific, technically actionable, and highly effective asymmetric marketing strategies.
 
 == CAMPAIGN OBJECTIVE ==
 Name: {campaign_name}
@@ -287,28 +287,28 @@ Opportunity Signals: {signals_list}
 {raw_data[:2500]}
 
 == TASK ==
-Forge an ultra-premium, highly differentiated strategy that completely obliterates the detected competitors ({competitor_list}).
+Forge an ultra-premium, highly differentiated strategy that clearly outmaneuvers the detected competitors ({competitor_list}).
 DO NOT USE GENERIC CORPORATE SPEAK LIKE "Leverage AI-driven hyper-personalization to maximize engagement". That is weak and boring.
-INSTEAD USE EXTREMELY AGGRESSIVE, HACKER-CENTRIC, AND HIGHLY SPECIFIC TACTICAL LANGUAGE. 
+INSTEAD USE ADVANCED, TECHNOLOGY-DRIVEN, AND HIGHLY SPECIFIC TACTICAL LANGUAGE (Agentic Directives, Asymmetric Vectors, Moats).
 
 EXAMPLE BAD CORE CONCEPT: "Leverage AI to create personalized marketing."
-EXAMPLE GOOD CORE CONCEPT: "Deploy an autonomous, hyper-targeted intercept campaign utilizing multi-agent swarms to siphon user attention directly from incumbent pipelines."
+EXAMPLE GOOD CORE CONCEPT: "Deploy an autonomous, hyper-targeted intercept campaign utilizing multi-agent swarms to capture user attention directly from incumbent pipelines."
 
 EXAMPLE BAD VECTOR: "Use SEO to get more leads."
-EXAMPLE GOOD VECTOR: "Execute a zero-day semantic override on {competitor_list[:20]}'s primary organic search terms by deploying programmatic SEO trap-pages."
+EXAMPLE GOOD VECTOR: "Execute a semantic dominance strategy on {competitor_list[:20]}'s primary organic search terms by deploying programmatic landing pages."
 
 EXAMPLE BAD MARKET INSIGHT: "The market is ready for a new AI tool."
-EXAMPLE GOOD MARKET INSIGHT: "Critical structural vulnerability detected: incumbent pipeline relies on monolithic legacy code, creating an exploitable latency wedge."
+EXAMPLE GOOD MARKET INSIGHT: "Critical structural vulnerability detected: incumbent pipeline relies on monolithic legacy systems, creating an exploitable latency wedge."
 
 Return ONLY valid JSON (no markdown block, just the raw json):
 {{
-    "core_concept": "A massive, aggressive thesis statement. No generic corporate buzzwords.",
+    "core_concept": "A massive, paradigm-shifting thesis statement. No generic corporate buzzwords.",
     "agentic_directive": "A one-sentence, highly directive command (e.g., 'INITIATE autonomous prospect scraping sequence on...').",
     "market_insight": "A brutally honest assessment of competitor weakness based on the Comprehend data.",
     "attack_vectors": [
-        "Vector 1: Specific, ruthless guerrilla growth tactic targeting {competitor_list[:20]}",
+        "Vector 1: Specific, high-impact asymmetric growth tactic targeting {competitor_list[:20]}",
         "Vector 2: Unconventional technical acquisition channel based on signals",
-        "Vector 3: Aggressive wedge strategy"
+        "Vector 3: Aggressive wedge strategy to breach the market"
     ],
     "target_audience": [
         {{"segment_name": "Ultra-specific Niche 1", "pain_point": "Deep psychological or technical bottleneck"}},
@@ -331,6 +331,7 @@ Return ONLY valid JSON (no markdown block, just the raw json):
                 "message": "Strategy synthesis complete"})
         except Exception as e:
             logger.error(f"Synthesis failed: {e}")
+            logger.error(f"RAW LLM CONTENT: {content}")
             strategy = {
                 "core_concept": f"Aggressive Wedge Entry into {goal} space",
                 "agentic_directive": f"Execute zero-day marketing pivot against {competitor_list[:20]}",
