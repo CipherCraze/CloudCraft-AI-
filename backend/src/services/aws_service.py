@@ -674,3 +674,230 @@ class ScoutDynamoDBService:
             "avg_past_score": round(avg_past, 1),
             "past_runs_count": len(past_runs)
         }
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# CAMPAIGN ARCHITECT AWS SERVICES
+# ══════════════════════════════════════════════════════════════════════════════
+
+class CampaignComprehendService:
+    """
+    AWS Comprehend NLP for Campaign Architect.
+    Analyses raw market/competitor recon text to extract:
+      - Competitor ORGANIZATION entities
+      - Market key phrases (opportunity signals)
+      - Overall market sentiment
+    """
+    def __init__(self):
+        self.comprehend = boto3.client(
+            'comprehend',
+            aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+            aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+            region_name=settings.AWS_REGION
+        )
+
+    async def analyze_market_intelligence(self, raw_text: str) -> Dict[str, Any]:
+        """
+        Full NLP enrichment on market recon data.
+        Returns competitor entities, key opportunity phrases, and market sentiment.
+        """
+        logger.info("[CAMPAIGN-COMPREHEND] Running market NLP extraction...")
+        safe_text = raw_text[:4900]
+
+        sentiment_data = {"sentiment": "NEUTRAL", "confidence": 75.0}
+        try:
+            resp = self.comprehend.detect_sentiment(Text=safe_text, LanguageCode='en')
+            scores = resp['SentimentScore']
+            sentiment_data = {
+                "sentiment": resp['Sentiment'],
+                "confidence": round((scores['Positive'] + scores['Neutral']) * 100, 1),
+                "scores": scores
+            }
+        except Exception as e:
+            logger.warning(f"[CAMPAIGN-COMPREHEND] Sentiment failed: {e}")
+
+        key_phrases: List[str] = []
+        try:
+            kp_resp = self.comprehend.detect_key_phrases(Text=safe_text, LanguageCode='en')
+            key_phrases = [
+                p['Text'] for p in kp_resp.get('KeyPhrases', [])
+                if p.get('Score', 0) > 0.80
+            ][:15]
+        except Exception as e:
+            logger.warning(f"[CAMPAIGN-COMPREHEND] Key phrases failed: {e}")
+
+        entities: List[Dict[str, Any]] = []
+        competitor_names: List[str] = []
+        try:
+            ent_resp = self.comprehend.detect_entities(Text=safe_text, LanguageCode='en')
+            wanted = {"ORGANIZATION", "PERSON", "LOCATION", "EVENT", "DATE"}
+            entities = [
+                {"text": e['Text'], "type": e['Type'], "score": round(e['Score'], 2)}
+                for e in ent_resp.get('Entities', [])
+                if e['Type'] in wanted and e.get('Score', 0) > 0.80
+            ][:12]
+            competitor_names = [
+                e['text'] for e in entities if e['type'] == 'ORGANIZATION'
+            ]
+        except Exception as e:
+            logger.warning(f"[CAMPAIGN-COMPREHEND] Entities failed: {e}")
+
+        logger.info(
+            f"[CAMPAIGN-COMPREHEND] Done — {sentiment_data['sentiment']} | "
+            f"{len(key_phrases)} phrases | {len(entities)} entities | "
+            f"{len(competitor_names)} competitors"
+        )
+        return {
+            "sentiment": sentiment_data["sentiment"],
+            "market_confidence": sentiment_data["confidence"],
+            "sentiment_scores": sentiment_data.get("scores", {}),
+            "key_phrases": key_phrases,
+            "entities": entities,
+            "competitor_names": competitor_names,
+        }
+
+
+class CampaignMemoryService:
+    """
+    DynamoDB memory for Campaign Architect.
+    Stores per-campaign enrichment metadata and computes similarity to past campaigns.
+    Table: cloudcraft-campaign-intelligence
+    """
+    TABLE_NAME = "cloudcraft-campaign-intelligence"
+    _table = None
+
+    def _get_table(self):
+        if self._table:
+            return self._table
+        dynamodb = boto3.resource(
+            'dynamodb',
+            aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+            aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+            region_name=settings.AWS_REGION
+        )
+        try:
+            t = dynamodb.Table(self.TABLE_NAME)
+            t.load()
+        except ClientError as e:
+            if e.response['Error']['Code'] == 'ResourceNotFoundException':
+                t = dynamodb.create_table(
+                    TableName=self.TABLE_NAME,
+                    KeySchema=[
+                        {'AttributeName': 'campaign_id', 'KeyType': 'HASH'},
+                        {'AttributeName': 'run_ts', 'KeyType': 'RANGE'},
+                    ],
+                    AttributeDefinitions=[
+                        {'AttributeName': 'campaign_id', 'AttributeType': 'S'},
+                        {'AttributeName': 'run_ts', 'AttributeType': 'S'},
+                    ],
+                    BillingMode='PAY_PER_REQUEST'
+                )
+                logger.info(f"[CAMPAIGN-MEMORY] Created table {self.TABLE_NAME}")
+            else:
+                raise
+        self._table = t
+        return self._table
+
+    async def save_campaign_intelligence(
+        self,
+        campaign_id: str,
+        campaign_name: str,
+        goal: str,
+        comprehend_data: Dict[str, Any],
+        strategy: Dict[str, Any],
+        market_confidence: float,
+    ) -> str:
+        run_id = str(uuid.uuid4())[:8]
+        run_ts = datetime.utcnow().isoformat()
+        item = {
+            "campaign_id": campaign_id,
+            "run_ts": run_ts,
+            "run_id": run_id,
+            "campaign_name": campaign_name,
+            "goal": goal[:500],
+            "market_sentiment": comprehend_data.get("sentiment", "NEUTRAL"),
+            "market_confidence": str(market_confidence),
+            "competitor_names": comprehend_data.get("competitor_names", []),
+            "key_phrases": comprehend_data.get("key_phrases", [])[:10],
+            "entity_count": str(len(comprehend_data.get("entities", []))),
+            "core_concept": strategy.get("core_concept", "")[:300],
+            "tagline": strategy.get("tagline", "")[:200],
+            "usps": strategy.get("usps", []),
+        }
+        try:
+            from fastapi.concurrency import run_in_threadpool
+            await run_in_threadpool(self._get_table().put_item, Item=item)
+            logger.info(f"[CAMPAIGN-MEMORY] Saved run {run_id} for campaign {campaign_id}")
+        except Exception as e:
+            logger.error(f"[CAMPAIGN-MEMORY] Save failed: {e}")
+        return run_id
+
+    async def get_similar_campaigns(self, goal: str, limit: int = 10) -> List[Dict]:
+        """
+        Scan recent campaign intelligence runs and find those with overlapping goal keywords.
+        Returns similarity metadata for the memory panel.
+        """
+        try:
+            from fastapi.concurrency import run_in_threadpool
+            resp = await run_in_threadpool(self._get_table().scan, Limit=50)
+            items = resp.get("Items", [])
+            goal_words = set(goal.lower().split())
+            scored = []
+            for item in items:
+                item_words = set(item.get("goal", "").lower().split())
+                overlap = goal_words & item_words
+                if overlap:
+                    score = round(len(overlap) / max(len(goal_words), 1) * 100)
+                    scored.append({**item, "_similarity": score})
+            scored.sort(key=lambda x: x["_similarity"], reverse=True)
+            return scored[:limit]
+        except Exception as e:
+            logger.error(f"[CAMPAIGN-MEMORY] Similarity search failed: {e}")
+            return []
+
+    def compute_campaign_delta(
+        self, comprehend_data: Dict, past_runs: List[Dict]
+    ) -> Dict[str, Any]:
+        """Compute what has changed vs past campaigns with similar goals."""
+        if not past_runs:
+            return {
+                "is_first_run": True,
+                "similar_count": 0,
+                "market_trend": "BASELINE",
+                "new_competitors": comprehend_data.get("competitor_names", []),
+                "recurring_competitors": [],
+                "avg_past_confidence": None,
+            }
+
+        past_competitors: set = set()
+        past_confidences: List[float] = []
+        for run in past_runs:
+            for c in run.get("competitor_names", []):
+                past_competitors.add(c.lower())
+            try:
+                past_confidences.append(float(run.get("market_confidence", 0)))
+            except (ValueError, TypeError):
+                pass
+
+        current_competitors = comprehend_data.get("competitor_names", [])
+        new_competitors = [c for c in current_competitors if c.lower() not in past_competitors]
+        recurring_competitors = [c for c in current_competitors if c.lower() in past_competitors]
+
+        current_confidence = comprehend_data.get("market_confidence", 75.0)
+        avg_past = sum(past_confidences) / len(past_confidences) if past_confidences else current_confidence
+        if current_confidence > avg_past + 8:
+            trend = "RISING"
+        elif current_confidence < avg_past - 8:
+            trend = "FALLING"
+        else:
+            trend = "STABLE"
+
+        return {
+            "is_first_run": False,
+            "similar_count": len(past_runs),
+            "market_trend": trend,
+            "new_competitors": new_competitors,
+            "recurring_competitors": recurring_competitors,
+            "avg_past_confidence": round(avg_past, 1),
+        }
+
