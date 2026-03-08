@@ -17,10 +17,22 @@ import {
   RefreshCw, Radar, LocateFixed, EyeOff, ScanFace, Shield, Crosshair, Terminal
 } from 'lucide-react'
 import { GenesisCanvas } from '@/features/genesis/GenesisCanvas'
+import { Header } from '@/components/layout/header'
+import { TopNav } from '@/components/layout/top-nav'
+import { ProfileDropdown } from '@/components/profile-dropdown'
+import { ThemeSwitch } from '@/components/theme-switch'
 
 export const Route = createFileRoute('/_authenticated/campaign-architect/')({
   component: CampaignArchitectPage,
 })
+
+const topNav = [
+  { title: 'Overview', href: '/dashboard', isActive: false },
+  { title: 'Chronos Brief', href: '/chronos-brief', isActive: false },
+  { title: 'Campaign Architect', href: '/campaign-architect', isActive: true },
+  { title: 'Campaign Calendar', href: '/calendar', isActive: false },
+  { title: 'Competitor Pulse', href: '/competitor-pulse', isActive: false },
+]
 
 const STEPS: PipelineStep[] = ['RECON', 'COMPREHEND', 'SYNTHESIS', 'MEMORY']
 
@@ -598,19 +610,40 @@ export default function CampaignArchitectPage() {
   // ── Genesis View ──────────────────────────────────────────────────────────
   if (activeCampaign && showGenesis) {
     return (
-      <div className="relative h-[calc(100vh-6rem)] w-full overflow-hidden rounded-xl border">
-        <Button variant="secondary" size="sm" onClick={() => setShowGenesis(false)} className="absolute top-4 left-4 z-50">
-          <ArrowLeft className="mr-2 h-4 w-4" /> Back to Architect
-        </Button>
-        <GenesisCanvas initialInput={activeCampaign.goal} autoStart={true} />
-      </div>
+      <>
+        <Header className="sticky top-0 z-50 border-b border-border/40 bg-background/80 backdrop-blur-xl px-4 sm:px-6 h-14">
+          <div className="flex items-center gap-4">
+            <TopNav links={topNav} />
+          </div>
+          <div className="ms-auto flex items-center space-x-4">
+            <ThemeSwitch />
+            <ProfileDropdown />
+          </div>
+        </Header>
+        <div className="relative h-[calc(100vh-6rem)] w-full overflow-hidden rounded-xl border">
+          <Button variant="secondary" size="sm" onClick={() => setShowGenesis(false)} className="absolute top-4 left-4 z-50">
+            <ArrowLeft className="mr-2 h-4 w-4" /> Back to Architect
+          </Button>
+          <GenesisCanvas initialInput={activeCampaign.goal} autoStart={true} />
+        </div>
+      </>
     )
   }
 
   // ── Detail View ──────────────────────────────────────────────────────────
   if (activeCampaign) {
     return (
-      <div className="flex-1 min-w-0 relative overflow-hidden">
+      <>
+        <Header className="sticky top-0 z-50 border-b border-border/40 bg-background/80 backdrop-blur-xl px-4 sm:px-6 h-14">
+          <div className="flex items-center gap-4">
+            <TopNav links={topNav} />
+          </div>
+          <div className="ms-auto flex items-center space-x-4">
+            <ThemeSwitch />
+            <ProfileDropdown />
+          </div>
+        </Header>
+        <div className="flex-1 min-w-0 relative overflow-hidden">
         {/* Premium background */}
         <div className="absolute inset-0 z-0 pointer-events-none opacity-[0.025] dark:opacity-[0.04]"
           style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, currentColor 1px, transparent 0)', backgroundSize: '32px 32px' }} />
@@ -767,12 +800,23 @@ export default function CampaignArchitectPage() {
           </AnimatePresence>
         </div>
       </div>
+      </>
     )
   }
 
   // ── List View ─────────────────────────────────────────────────────────────
   return (
-    <div className="flex-1 min-w-0 relative overflow-hidden">
+    <>
+      <Header className="sticky top-0 z-50 border-b border-border/40 bg-background/80 backdrop-blur-xl px-4 sm:px-6 h-14">
+        <div className="flex items-center gap-4">
+          <TopNav links={topNav} />
+        </div>
+        <div className="ms-auto flex items-center space-x-4">
+          <ThemeSwitch />
+          <ProfileDropdown />
+        </div>
+      </Header>
+      <div className="flex-1 min-w-0 relative overflow-hidden">
       {/* Premium dot-matrix background grid */}
       <div className="absolute inset-0 z-0 pointer-events-none opacity-[0.03] dark:opacity-[0.05]"
         style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, currentColor 1px, transparent 0)', backgroundSize: '32px 32px' }} />
@@ -996,5 +1040,6 @@ export default function CampaignArchitectPage() {
         )}
       </div>
     </div>
+    </>
   )
 }

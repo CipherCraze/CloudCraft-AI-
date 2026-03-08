@@ -48,10 +48,21 @@ import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import type { ScheduledPost } from '@/types/calendar'
+import { Header } from '@/components/layout/header'
+import { TopNav } from '@/components/layout/top-nav'
+import { ProfileDropdown } from '@/components/profile-dropdown'
+import { ThemeSwitch } from '@/components/theme-switch'
 
 export const Route = createFileRoute('/_authenticated/calendar/')({
   component: CampaignCalendarPage,
 })
+
+const topNav = [
+  { title: 'Overview', href: '/dashboard', isActive: false },
+  { title: 'Campaign Architect', href: '/campaign-architect', isActive: false },
+  { title: 'Campaign Calendar', href: '/calendar', isActive: true },
+  { title: 'Competitor Pulse', href: '/competitor-pulse', isActive: false },
+]
 
 function cx(...cs: (string | undefined | false | null)[]) {
   return cs.filter(Boolean).join(' ')
@@ -177,7 +188,17 @@ function CampaignCalendarPage() {
   ]
 
   return (
-    <div className="flex-1 min-w-0 relative overflow-hidden">
+    <>
+      <Header className="sticky top-0 z-50 border-b border-border/40 bg-background/80 backdrop-blur-xl px-4 sm:px-6 h-14">
+        <div className="flex items-center gap-4">
+          <TopNav links={topNav} />
+        </div>
+        <div className="ms-auto flex items-center space-x-4">
+          <ThemeSwitch />
+          <ProfileDropdown />
+        </div>
+      </Header>
+      <div className="flex-1 min-w-0 relative overflow-hidden">
       {/* Premium dot-matrix background */}
       <div className="absolute inset-0 z-0 pointer-events-none opacity-[0.025] dark:opacity-[0.04]"
         style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, currentColor 1px, transparent 0)', backgroundSize: '32px 32px' }}
@@ -672,5 +693,6 @@ function CampaignCalendarPage() {
         </DialogContent>
       </Dialog>
     </div>
+    </>
   )
 }
